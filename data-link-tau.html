@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>DataLink Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0D0C;--surf:#131614;--surf2:#1A1D1A;--surf3:#212420;
+  --bdr:#252926;--bdr2:#2F342E;
+  --amber:#D4870A;--amber-lo:#7A4E06;--amber-hi:#F0A020;
+  --green:#2D7A4A;--green-hi:#4ABF73;
+  --red:#C0392B;--red-lo:#4A1515;
+  --txt:#DDD9CE;--txt-mid:#9B9E97;--txt-dim:#505650;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Sora',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;line-height:1.5;min-height:100vh;overflow-x:hidden}
+.screen{display:none;min-height:100vh;flex-direction:column}
+.screen.active{display:flex}
+
+/* HOME */
+#s-home{align-items:center;justify-content:center;padding:2rem 1.5rem}
+.home-inner{max-width:360px;width:100%;text-align:center}
+.brand-ring{width:64px;height:64px;border:1px solid var(--amber);border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.75rem;position:relative}
+.brand-ring::before{content:'';position:absolute;inset:-16px;border:1px solid var(--amber-lo);border-radius:24px;animation:rpulse 2.5s ease-out infinite}
+.brand-ring::after{content:'';position:absolute;inset:-32px;border:1px solid var(--amber-lo);border-radius:32px;opacity:.4;animation:rpulse 2.5s ease-out .6s infinite}
+@keyframes rpulse{0%{opacity:.6;transform:scale(.85)}100%{opacity:0;transform:scale(1.15)}}
+.brand-icon{font-size:26px}
+.brand-name{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--txt);letter-spacing:-1px;margin-bottom:4px}
+.brand-ver{font-family:var(--mono);font-size:10px;color:var(--amber);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.brand-sub{font-size:12px;color:var(--txt-dim);margin-bottom:2.5rem;line-height:1.8}
+.mode-grid{display:grid;gap:10px;margin-bottom:2rem}
+.mode-card{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:1.25rem;text-align:left;cursor:pointer;transition:border-color .2s,background .2s;position:relative;overflow:hidden}
+.mode-card:hover,.mode-card:active{border-color:var(--amber-lo);background:var(--surf2)}
+.mode-card-accent{position:absolute;top:0;right:0;width:60px;height:60px;background:radial-gradient(circle at 100% 0%,var(--amber-lo),transparent 70%);opacity:.3}
+.mode-ico{font-size:22px;margin-bottom:10px}
+.mode-tag{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--amber);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px}
+.mode-desc{font-size:12px;color:var(--txt-dim);line-height:1.6}
+.tech-line{font-family:var(--mono);font-size:10px;color:var(--txt-dim);letter-spacing:.5px;line-height:2}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;padding:.875rem 1.25rem;border-bottom:1px solid var(--bdr);gap:10px;flex-shrink:0;background:var(--surf)}
+.back-btn{background:none;border:1px solid var(--bdr2);color:var(--txt-dim);padding:5px 12px;border-radius:8px;font-family:var(--mono);font-size:11px;cursor:pointer;transition:all .2s}
+.back-btn:hover{border-color:var(--txt-dim);color:var(--txt)}
+.topbar-title{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt);text-transform:uppercase;letter-spacing:.8px}
+.conn-badge{margin-left:auto;display:flex;align-items:center;gap:7px}
+.sig-dot{width:7px;height:7px;border-radius:50%;background:var(--txt-dim)}
+.sig-dot.wait{background:var(--amber);animation:blink 1s ease-in-out infinite}
+.sig-dot.live{background:var(--green-hi)}
+.sig-dot.err{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.sig-txt{font-family:var(--mono);font-size:10px;color:var(--txt-dim)}
+
+/* CONTENT */
+.content{flex:1;padding:1.25rem;overflow-y:auto}
+
+/* CODE BLOCK */
+.code-block{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:1.5rem;text-align:center;margin-bottom:12px}
+.block-label{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--txt-dim);margin-bottom:12px}
+.code-big{font-family:var(--mono);font-size:38px;font-weight:700;letter-spacing:10px;color:var(--amber);margin-bottom:14px;text-shadow:0 0 20px rgba(212,135,10,.2)}
+.qr-frame{background:#fff;padding:10px;border-radius:10px;display:inline-block;margin-bottom:12px}
+.code-hint{font-size:12px;color:var(--txt-dim);line-height:1.7}
+
+/* STATUS BAR */
+.status-bar{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;padding:11px 14px;display:flex;align-items:center;gap:10px;margin-bottom:12px;font-size:12px;color:var(--txt-mid)}
+
+/* CMD GRID */
+.section-hd{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--txt-dim);margin-bottom:8px}
+.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.cmd-btn{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:1rem .75rem;text-align:center;cursor:pointer;transition:all .2s;color:var(--txt);font-family:inherit}
+.cmd-btn:hover:not(:disabled){border-color:var(--amber-lo);background:var(--surf2)}
+.cmd-btn:active:not(:disabled){transform:scale(.97)}
+.cmd-btn:disabled{opacity:.3;cursor:not-allowed}
+.cmd-ico{font-size:22px;margin-bottom:6px}
+.cmd-lbl{font-size:11px;font-family:var(--mono);color:var(--txt-mid)}
+
+/* GALLERY */
+.gallery{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.g-item{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;overflow:hidden;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.g-item img{width:100%;height:110px;object-fit:cover;display:block}
+.g-foot{padding:6px 8px;display:flex;align-items:center;gap:4px}
+.g-name{flex:1;font-size:10px;font-family:var(--mono);color:var(--txt-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.g-dl{font-size:14px;cursor:pointer;color:var(--amber);text-decoration:none;padding:2px 4px;flex-shrink:0}
+.g-file-box{height:80px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px}
+.g-file-ico{font-size:24px}
+.g-ext{font-size:9px;font-family:var(--mono);color:var(--amber);text-transform:uppercase;background:var(--surf3);padding:2px 6px;border-radius:4px}
+.g-empty{grid-column:1/-1;text-align:center;padding:2.5rem 1rem;color:var(--txt-dim);font-size:12px;font-family:var(--mono);line-height:2}
+
+/* PROGRESS */
+.prog-wrap{margin-bottom:12px}
+.prog-bg{height:3px;background:var(--surf3);border-radius:2px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--amber-lo),var(--amber));border-radius:2px;transition:width .15s;width:0%}
+.prog-info{display:flex;justify-content:space-between;font-size:10px;font-family:var(--mono);color:var(--txt-dim);margin-top:4px}
+
+/* BUTTONS */
+.btn-amber{width:100%;padding:14px;background:var(--amber);color:var(--bg);border:none;border-radius:10px;font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:opacity .2s;margin-bottom:10px}
+.btn-amber:hover:not(:disabled){opacity:.88}
+.btn-amber:disabled{opacity:.35;cursor:not-allowed}
+.btn-ghost{width:100%;padding:12px;background:transparent;border:1px solid var(--bdr2);border-radius:10px;color:var(--txt-mid);font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s;margin-bottom:10px}
+.btn-ghost:hover{border-color:var(--green);color:var(--green-hi)}
+.btn-red{width:100%;padding:12px;background:transparent;border:1px solid var(--red-lo);border-radius:10px;color:#C07070;font-family:var(--mono);font-size:12px;cursor:pointer;transition:all .2s;margin-bottom:10px}
+.btn-red:hover{background:rgba(192,57,43,.08)}
+
+/* PHONE INPUT */
+.ph-input-block{background:var(--surf);border:1px solid var(--bdr);border-radius:14px;padding:1.5rem;margin-bottom:12px;text-align:center}
+.code-input{width:100%;background:var(--surf2);border:1px solid var(--bdr2);border-radius:10px;padding:14px;font-family:var(--mono);font-size:30px;font-weight:700;letter-spacing:10px;color:var(--amber);text-align:center;text-transform:uppercase;outline:none;margin-bottom:12px;-webkit-appearance:none}
+.code-input:focus{border-color:var(--amber-lo)}
+
+/* PHONE ACTIVE — action card */
+.ph-action-card{background:var(--surf);border:1px solid var(--bdr);border-radius:16px;padding:2rem 1.25rem;text-align:center;margin-bottom:12px}
+.ph-action-ico{font-size:48px;margin-bottom:12px;display:block}
+.ph-action-title{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--txt);margin-bottom:8px}
+.ph-action-sub{font-size:12px;color:var(--txt-dim);line-height:1.8;margin-bottom:20px}
+
+/* BIG ACTION BUTTON — the one the user must tap */
+.btn-action{width:100%;padding:20px;background:var(--amber);color:var(--bg);border:none;border-radius:14px;font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:transform .1s,opacity .2s;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:10px}
+.btn-action:active{transform:scale(.97);opacity:.88}
+.btn-action-ico{font-size:22px}
+
+.ph-sent-count{font-family:var(--mono);font-size:11px;color:var(--txt-dim);text-align:center;margin-bottom:12px;padding:8px;background:var(--surf);border-radius:8px}
+.ph-waiting{color:var(--txt-dim);font-size:12px;font-family:var(--mono);text-align:center;line-height:2;padding:1.5rem 0}
+
+/* CAMERA OVERLAY */
+#cam-screen{position:fixed;inset:0;background:#000;z-index:200;display:none;flex-direction:column}
+#cam-screen.show{display:flex}
+.cam-topbar{position:absolute;top:0;left:0;right:0;z-index:10;padding:.875rem 1.25rem;display:flex;align-items:center;gap:12px;background:linear-gradient(rgba(0,0,0,.6),transparent)}
+.cam-title{font-family:var(--mono);font-size:12px;font-weight:600;color:rgba(255,255,255,.9);text-transform:uppercase;letter-spacing:1px}
+#cam-video{width:100%;height:100%;object-fit:cover}
+.cam-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.cam-guide{width:82%;height:62%;border:1.5px solid rgba(255,255,255,.4);border-radius:8px;position:relative}
+.cam-guide::before{content:'';position:absolute;top:-2px;left:-2px;width:22px;height:22px;border-top:3px solid var(--amber);border-left:3px solid var(--amber);border-radius:4px 0 0 0}
+.cam-guide::after{content:'';position:absolute;top:-2px;right:-2px;width:22px;height:22px;border-top:3px solid var(--amber);border-right:3px solid var(--amber);border-radius:0 4px 0 0}
+.cam-guide-bl{position:absolute;bottom:-2px;left:-2px;width:22px;height:22px;border-bottom:3px solid var(--amber);border-left:3px solid var(--amber);border-radius:0 0 0 4px}
+.cam-guide-br{position:absolute;bottom:-2px;right:-2px;width:22px;height:22px;border-bottom:3px solid var(--amber);border-right:3px solid var(--amber);border-radius:0 0 4px 0}
+.cam-bottom{position:absolute;bottom:0;left:0;right:0;padding:2rem 1.5rem;display:flex;align-items:center;justify-content:center;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+.capture-btn{width:76px;height:76px;border-radius:50%;background:rgba(255,255,255,.12);border:3px solid rgba(255,255,255,.85);cursor:pointer;position:relative;transition:transform .1s;flex-shrink:0}
+.capture-btn::after{content:'';position:absolute;inset:7px;background:white;border-radius:50%}
+.capture-btn:active{transform:scale(.92)}
+.cam-flash{position:absolute;inset:0;background:white;opacity:0;pointer-events:none;transition:opacity .08s}
+.cam-flash.flash{opacity:.85}
+.cam-sending-overlay{position:absolute;inset:0;background:rgba(0,0,0,.75);display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.cam-sending-overlay.show{display:flex}
+.cam-sending-ico{font-size:36px;animation:float 1.2s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.cam-sending-txt{font-family:var(--mono);font-size:13px;color:var(--amber)}
+
+/* FILE INPUT hidden */
+#ph-file-in{display:none}
+canvas#snap-cv{display:none}
+</style>
+</head>
+<body>
+
+<!-- ════ HOME ════ -->
+<div id="s-home" class="screen active">
+<div style="display:flex;align-items:center;justify-content:center;flex:1;padding:2rem 1.5rem">
+<div class="home-inner">
+  <div class="brand-ring"><div class="brand-icon">🔗</div></div>
+  <div class="brand-name">DATALINK PRO</div>
+  <div class="brand-ver">v2.1 · WebRTC P2P</div>
+  <div class="brand-sub">Transferencia segura entre dispositivos<br>sin WhatsApp · sin cables · sin email</div>
+  <div class="mode-grid">
+    <div class="mode-card" onclick="startPC()">
+      <div class="mode-card-accent"></div>
+      <div class="mode-ico">🖥</div>
+      <div class="mode-tag">Modo PC / Escritorio</div>
+      <div class="mode-desc">Genera el codigo, solicita capturas al celular y recibe todo aqui.</div>
+    </div>
+    <div class="mode-card" onclick="startPhone()">
+      <div class="mode-card-accent"></div>
+      <div class="mode-ico">📱</div>
+      <div class="mode-tag">Modo Celular</div>
+      <div class="mode-desc">Conectate al PC y ejecuta las capturas que el operador solicite.</div>
+    </div>
+  </div>
+  <div class="tech-line">🔒 CIFRADO DTLS · P2P DIRECTO · CELULAR SIN RESIDUOS</div>
+</div>
+</div>
+</div>
+
+<!-- ════ PC MODE ════ -->
+<div id="s-pc" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="resetAll();go('s-home')">← Salir</button>
+    <span class="topbar-title">Control PC</span>
+    <div class="conn-badge">
+      <div class="sig-dot wait" id="pc-dot"></div>
+      <span class="sig-txt" id="pc-sig">Iniciando...</span>
+    </div>
+  </div>
+  <div class="content">
+
+    <div id="pc-ph-connect">
+      <div class="code-block">
+        <div class="block-label">Codigo de sesion</div>
+        <div class="code-big" id="pc-code">· · · · · ·</div>
+        <div class="qr-frame" id="pc-qr"></div>
+        <div class="code-hint">El celular abre DataLink Pro en Modo Celular<br>e ingresa este codigo para conectarse</div>
+      </div>
+      <div class="status-bar">
+        <div class="sig-dot wait"></div>
+        <span id="pc-init-txt">Generando enlace seguro...</span>
+      </div>
+    </div>
+
+    <div id="pc-ph-active" style="display:none">
+      <div id="pc-recv-status" class="status-bar" style="display:none">
+        <div class="sig-dot wait"></div>
+        <span id="pc-recv-txt">Recibiendo...</span>
+      </div>
+      <div id="pc-prog" class="prog-wrap" style="display:none">
+        <div class="prog-bg"><div class="prog-fill" id="pc-prog-fill"></div></div>
+        <div class="prog-info"><span id="pc-prog-name">-</span><span id="pc-prog-pct">0%</span></div>
+      </div>
+
+      <div class="section-hd">Solicitar al celular</div>
+      <div class="cmd-grid">
+        <div class="cmd-btn" id="cmd-photo" onclick="sendCmd('photo')"><div class="cmd-ico">📷</div><div class="cmd-lbl">Foto</div></div>
+        <div class="cmd-btn" id="cmd-scan"  onclick="sendCmd('scan')"><div class="cmd-ico">📄</div><div class="cmd-lbl">Escanear doc</div></div>
+        <div class="cmd-btn" id="cmd-selfie" onclick="sendCmd('selfie')"><div class="cmd-ico">🤳</div><div class="cmd-lbl">Selfie / ID</div></div>
+        <div class="cmd-btn" id="cmd-pick_file" onclick="sendCmd('pick_file')"><div class="cmd-ico">📁</div><div class="cmd-lbl">Archivo</div></div>
+      </div>
+
+      <div class="section-hd" style="margin-top:4px">
+        Archivos recibidos <span id="pc-recv-count" style="color:var(--amber)">0</span>
+      </div>
+      <div class="gallery" id="pc-gallery">
+        <div class="g-empty">Esperando archivos del celular...</div>
+      </div>
+      <button class="btn-ghost" id="pc-dl-all" onclick="downloadAll()" style="display:none">↓ Descargar todo</button>
+      <button class="btn-red" onclick="endSession()">Terminar sesion</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════ PHONE MODE ════ -->
+<div id="s-phone" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="resetAll();go('s-home')">← Salir</button>
+    <span class="topbar-title">Modo Celular</span>
+    <div class="conn-badge">
+      <div class="sig-dot" id="ph-dot"></div>
+      <span class="sig-txt" id="ph-sig">Desconectado</span>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- CONEXION -->
+    <div id="ph-ph-connect">
+      <div class="ph-input-block">
+        <div class="block-label" style="margin-bottom:14px">Codigo del PC</div>
+        <input type="text" class="code-input" id="ph-code-in" placeholder="000000" maxlength="6"
+          oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')">
+        <button class="btn-amber" id="ph-conn-btn" onclick="phoneConnect()">Conectar al PC</button>
+      </div>
+      <div class="status-bar" id="ph-init-bar" style="display:none">
+        <div class="sig-dot wait"></div>
+        <span id="ph-init-txt">Buscando PC...</span>
+      </div>
+    </div>
+
+    <!-- ACTIVO -->
+    <div id="ph-ph-active" style="display:none">
+
+      <!-- Tarjeta de accion — cambia segun el comando -->
+      <div class="ph-action-card" id="ph-action-card">
+        <span class="ph-action-ico" id="ph-action-ico">⏳</span>
+        <div class="ph-action-title" id="ph-action-title">Enlace activo</div>
+        <div class="ph-action-sub" id="ph-action-sub">Esperando instrucciones del PC...</div>
+        <!-- Boton de accion: aparece solo cuando hay un comando pendiente -->
+        <button class="btn-action" id="ph-action-btn" style="display:none" onclick="executeAction()">
+          <span class="btn-action-ico" id="ph-action-btn-ico">📷</span>
+          <span id="ph-action-btn-lbl">Toca para capturar</span>
+        </button>
+      </div>
+
+      <div id="ph-prog" class="prog-wrap" style="display:none">
+        <div class="prog-bg"><div class="prog-fill" id="ph-prog-fill"></div></div>
+        <div class="prog-info"><span id="ph-prog-name">Enviando...</span><span id="ph-prog-pct">0%</span></div>
+      </div>
+
+      <div class="ph-sent-count" id="ph-sent-count" style="display:none"></div>
+      <button class="btn-red" onclick="phoneDisconnect()">Desconectar</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════ CAMERA ════ -->
+<div id="cam-screen">
+  <div class="cam-topbar">
+    <button class="back-btn" style="color:rgba(255,255,255,.8);border-color:rgba(255,255,255,.2)" onclick="closeCamera()">✕ Cancelar</button>
+    <span class="cam-title" id="cam-lbl">Tomar foto</span>
+  </div>
+  <video id="cam-video" autoplay playsinline muted></video>
+  <div class="cam-overlay" id="cam-ov" style="display:none">
+    <div class="cam-guide"><div class="cam-guide-bl"></div><div class="cam-guide-br"></div></div>
+  </div>
+  <div class="cam-flash" id="cam-flash"></div>
+  <div class="cam-bottom">
+    <button class="capture-btn" onclick="captureNow()"></button>
+  </div>
+  <div class="cam-sending-overlay" id="cam-sending">
+    <div class="cam-sending-ico">📡</div>
+    <div class="cam-sending-txt">Enviando al PC...</div>
+  </div>
+</div>
+
+<!-- input file oculto — se activa solo desde tap del usuario -->
+<input type="file" id="ph-file-in" multiple onchange="onFilePicked(this.files)">
+<canvas id="snap-cv" style="display:none"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+// ─── STATE ───────────────────────────────────────
+let peer=null,conn=null;
+let receivedFiles=[];
+let sentCount=0;
+let camStream=null,camMode='photo';
+let rBuf=[],rMeta=null,rTotal=0;
+let pendingCmd=null; // comando esperando tap del usuario
+
+// ─── NAV ─────────────────────────────────────────
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function setSig(side,state,txt){
+  const dot=document.getElementById(side+'-dot');
+  const el=document.getElementById(side+'-sig');
+  dot.className='sig-dot'+(state?' '+state:'');
+  if(el)el.textContent=txt||'';
+}
+
+// ─── RESET ───────────────────────────────────────
+function resetAll(){
+  stopCam();
+  document.getElementById('cam-screen').classList.remove('show');
+  if(peer){try{peer.destroy();}catch(e){}}
+  peer=null;conn=null;receivedFiles=[];sentCount=0;
+  rBuf=[];rMeta=null;rTotal=0;pendingCmd=null;
+  // PC
+  document.getElementById('pc-gallery').innerHTML='<div class="g-empty">Esperando archivos del celular...</div>';
+  document.getElementById('pc-recv-count').textContent='0';
+  document.getElementById('pc-qr').innerHTML='';
+  document.getElementById('pc-code').textContent='· · · · · ·';
+  document.getElementById('pc-ph-active').style.display='none';
+  document.getElementById('pc-ph-connect').style.display='block';
+  document.getElementById('pc-prog').style.display='none';
+  document.getElementById('pc-recv-status').style.display='none';
+  document.getElementById('pc-dl-all').style.display='none';
+  // Phone
+  document.getElementById('ph-ph-connect').style.display='block';
+  document.getElementById('ph-ph-active').style.display='none';
+  document.getElementById('ph-init-bar').style.display='none';
+  document.getElementById('ph-code-in').value='';
+  document.getElementById('ph-conn-btn').disabled=false;
+  document.getElementById('ph-conn-btn').textContent='Conectar al PC';
+  document.getElementById('ph-prog').style.display='none';
+  document.getElementById('ph-sent-count').style.display='none';
+  document.getElementById('ph-action-btn').style.display='none';
+  setSig('pc','','Sin conexion');setSig('ph','','Desconectado');
+}
+
+// ─── HELPERS ─────────────────────────────────────
+function mkId(){const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>c[Math.floor(Math.random()*c.length)]).join('');}
+function fmt(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+function fileIcon(name){
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  const m={jpg:'🖼',jpeg:'🖼',png:'🖼',gif:'🖼',webp:'🖼',heic:'🖼',heif:'🖼',pdf:'📕',zip:'📦',rar:'📦',gz:'📦',mp4:'🎬',mov:'🎬',avi:'🎬',mkv:'🎬',mp3:'🎵',wav:'🎵',aac:'🎵',doc:'📄',docx:'📄',xls:'📊',xlsx:'📊',ppt:'📊',pptx:'📊'};
+  return m[ext]||'📁';
+}
+
+// ─── PC MODE ─────────────────────────────────────
+function startPC(){
+  go('s-pc');
+  setSig('pc','wait','Iniciando...');
+  const sid=mkId();
+  peer=new Peer(sid,{debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
+  peer.on('open',(id)=>{
+    document.getElementById('pc-code').textContent=id;
+    document.getElementById('pc-qr').innerHTML='';
+    new QRCode(document.getElementById('pc-qr'),{text:id,width:160,height:160,correctLevel:QRCode.CorrectLevel.M});
+    setSig('pc','wait','Esperando celular...');
+    document.getElementById('pc-init-txt').textContent='Comparte el codigo con el celular';
+  });
+  peer.on('connection',(c)=>{
+    conn=c;
+    setSig('pc','live','Enlace activo');
+    document.getElementById('pc-ph-connect').style.display='none';
+    document.getElementById('pc-ph-active').style.display='block';
+    disableCmds(false);
+    c.on('data',pcOnData);
+    c.on('close',()=>{setSig('pc','err','Celular desconectado');disableCmds(true);});
+    c.on('error',()=>{setSig('pc','err','Error de enlace');disableCmds(true);});
+  });
+  peer.on('error',(e)=>{
+    setSig('pc','err','Error: '+e.type);
+    document.getElementById('pc-init-txt').textContent='Error al iniciar. Recarga.';
+  });
+}
+function disableCmds(v){document.querySelectorAll('.cmd-btn').forEach(b=>b.disabled=v);}
+function sendCmd(cmd){
+  if(!conn)return;
+  conn.send(JSON.stringify({cmd}));
+  const txt={photo:'Solicitud de foto enviada...',scan:'Solicitud de escaneo enviada...',selfie:'Solicitud de selfie enviada...',pick_file:'Solicitud de archivo enviada...'};
+  setSig('pc','wait',txt[cmd]||'Esperando...');
+}
+function pcOnData(data){
+  if(typeof data==='string'){
+    const m=JSON.parse(data);
+    if(m.t==='meta'){
+      rBuf=[];rTotal=0;rMeta=m;
+      document.getElementById('pc-recv-status').style.display='flex';
+      document.getElementById('pc-recv-txt').textContent='Recibiendo: '+m.name;
+      document.getElementById('pc-prog').style.display='block';
+      document.getElementById('pc-prog-name').textContent=m.name;
+      document.getElementById('pc-prog-fill').style.width='0%';
+      document.getElementById('pc-prog-pct').textContent='0%';
+    } else if(m.t==='done'){
+      const blob=new Blob(rBuf,{type:rMeta.mime||'application/octet-stream'});
+      const url=URL.createObjectURL(blob);
+      receivedFiles.push({name:rMeta.name,url,mime:rMeta.mime});
+      addToGallery(rMeta.name,url,rMeta.mime);
+      document.getElementById('pc-recv-count').textContent=receivedFiles.length;
+      document.getElementById('pc-prog-fill').style.width='100%';
+      document.getElementById('pc-prog-pct').textContent='100%';
+      document.getElementById('pc-dl-all').style.display='block';
+      setSig('pc','live','Enlace activo');
+      setTimeout(()=>{document.getElementById('pc-recv-status').style.display='none';document.getElementById('pc-prog').style.display='none';},1800);
+      rBuf=[];rMeta=null;rTotal=0;
+    } else if(m.t==='bye'){setSig('pc','err','Celular desconectado');disableCmds(true);}
+  } else {
+    rBuf.push(data);rTotal+=data.byteLength;
+    if(rMeta&&rMeta.size>0){
+      const pct=Math.min(Math.round(rTotal/rMeta.size*100),100);
+      document.getElementById('pc-prog-fill').style.width=pct+'%';
+      document.getElementById('pc-prog-pct').textContent=pct+'%';
+    }
+  }
+}
+function addToGallery(name,url,mime){
+  const empty=document.querySelector('.g-empty');if(empty)empty.remove();
+  const isImg=mime&&mime.startsWith('image/');
+  const ext=(name.split('.').pop()||'').toLowerCase();
+  const div=document.createElement('div');div.className='g-item';
+  if(isImg){
+    div.innerHTML=`<img src="${url}" alt="${name}" loading="lazy"><div class="g-foot"><span class="g-name">${name}</span><a href="${url}" download="${name}" class="g-dl">↓</a></div>`;
+  } else {
+    div.innerHTML=`<div class="g-file-box"><div class="g-file-ico">${fileIcon(name)}</div><div class="g-ext">${ext}</div></div><div class="g-foot"><span class="g-name">${name}</span><a href="${url}" download="${name}" class="g-dl">↓</a></div>`;
+  }
+  document.getElementById('pc-gallery').appendChild(div);
+}
+async function downloadAll(){for(const f of receivedFiles){const a=document.createElement('a');a.href=f.url;a.download=f.name;a.click();await new Promise(r=>setTimeout(r,350));}}
+function endSession(){if(conn){try{conn.send(JSON.stringify({cmd:'disconnect'}));}catch(e){}}setTimeout(()=>{resetAll();go('s-home');},400);}
+
+// ─── PHONE MODE ──────────────────────────────────
+function startPhone(){go('s-phone');}
+
+function phoneConnect(){
+  const code=document.getElementById('ph-code-in').value.trim().toUpperCase();
+  if(code.length<6){alert('Ingresa el codigo completo de 6 caracteres');return;}
+  document.getElementById('ph-conn-btn').disabled=true;
+  document.getElementById('ph-conn-btn').textContent='Conectando...';
+  document.getElementById('ph-init-bar').style.display='flex';
+  document.getElementById('ph-init-txt').textContent='Buscando PC con codigo '+code+'...';
+  setSig('ph','wait','Conectando...');
+  peer=new Peer(null,{debug:0,config:{iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}});
+  peer.on('open',()=>{
+    conn=peer.connect(code,{reliable:true});
+    conn.on('open',()=>{
+      setSig('ph','live','Enlace activo');
+      document.getElementById('ph-ph-connect').style.display='none';
+      document.getElementById('ph-ph-active').style.display='block';
+      setActionIdle();
+    });
+    conn.on('data',phoneOnData);
+    conn.on('close',()=>{setSig('ph','err','PC desconectado');setActionDone('🔌','Sesion cerrada por el PC','Ningun archivo queda en este dispositivo.');});
+    conn.on('error',()=>{setSig('ph','err','Error');resetConnBtn();});
+  });
+  peer.on('error',()=>{setSig('ph','err','No encontrado');document.getElementById('ph-init-txt').textContent='PC no encontrado. Verifica el codigo.';resetConnBtn();});
+}
+function resetConnBtn(){document.getElementById('ph-conn-btn').disabled=false;document.getElementById('ph-conn-btn').textContent='Reintentar';}
+
+// ── Phone action card helpers ──────────────────────
+function setActionIdle(){
+  pendingCmd=null;
+  document.getElementById('ph-action-ico').textContent='⏳';
+  document.getElementById('ph-action-title').textContent='Enlace activo';
+  document.getElementById('ph-action-sub').textContent='Esperando instrucciones del PC...\n\nEl operador decidirá qué capturar.';
+  document.getElementById('ph-action-btn').style.display='none';
+}
+function setActionRequest(ico,title,sub,btnIco,btnLbl,cmd){
+  pendingCmd=cmd;
+  document.getElementById('ph-action-ico').textContent=ico;
+  document.getElementById('ph-action-title').textContent=title;
+  document.getElementById('ph-action-sub').textContent=sub;
+  document.getElementById('ph-action-btn-ico').textContent=btnIco;
+  document.getElementById('ph-action-btn-lbl').textContent=btnLbl;
+  document.getElementById('ph-action-btn').style.display='flex';
+}
+function setActionDone(ico,title,sub){
+  pendingCmd=null;
+  document.getElementById('ph-action-ico').textContent=ico;
+  document.getElementById('ph-action-title').textContent=title;
+  document.getElementById('ph-action-sub').textContent=sub;
+  document.getElementById('ph-action-btn').style.display='none';
+}
+
+// ── Recibir comando del PC — solo preparar UI, NO ejecutar camara ──
+function phoneOnData(data){
+  if(typeof data!=='string')return;
+  const m=JSON.parse(data);
+  const configs={
+    photo:   {ico:'📷',title:'El operador solicita una foto',   sub:'Apunta la camara al objeto o documento.\nToca el boton cuando estes listo.',btnIco:'📷',btnLbl:'Toca para abrir camara'},
+    scan:    {ico:'📄',title:'El operador solicita escaneo',    sub:'Coloca el documento en una superficie plana.\nToca el boton para escanear.',btnIco:'📄',btnLbl:'Toca para escanear'},
+    selfie:  {ico:'🤳',title:'El operador solicita identificacion',sub:'Se usara la camara frontal.\nToca el boton cuando estes listo.',btnIco:'🤳',btnLbl:'Toca para tomar selfie'},
+    pick_file:{ico:'📁',title:'El operador solicita un archivo', sub:'Elige el archivo desde tu almacenamiento.\nToca el boton para buscar.',btnIco:'📁',btnLbl:'Toca para seleccionar archivo'},
+    disconnect:{ico:'✅',title:'Sesion terminada',sub:'El PC cerro la sesion.\nNingun archivo queda en este dispositivo.'}
+  };
+  const cfg=configs[m.cmd];
+  if(!cfg)return;
+  if(m.cmd==='disconnect'){setActionDone(cfg.ico,cfg.title,cfg.sub);return;}
+  setActionRequest(cfg.ico,cfg.title,cfg.sub,cfg.btnIco,cfg.btnLbl,m.cmd);
+}
+
+// ── Este es el tap real del usuario — aqui si puede abrir camara/archivo ──
+function executeAction(){
+  if(!pendingCmd)return;
+  const cmd=pendingCmd;
+  document.getElementById('ph-action-btn').style.display='none';
+  if(cmd==='photo')   openCamera('photo');
+  else if(cmd==='scan')    openCamera('scan');
+  else if(cmd==='selfie')  openCamera('selfie');
+  else if(cmd==='pick_file') document.getElementById('ph-file-in').click();
+}
+
+function phoneDisconnect(){if(conn){try{conn.send(JSON.stringify({t:'bye'}));}catch(e){}}resetAll();go('s-home');}
+
+// ─── CAMERA ──────────────────────────────────────
+async function openCamera(mode){
+  camMode=mode;
+  const labels={photo:'Tomar foto',scan:'Escanear documento',selfie:'Selfie / Identificacion'};
+  document.getElementById('cam-lbl').textContent=labels[mode]||'Captura';
+  document.getElementById('cam-ov').style.display=mode==='scan'?'flex':'none';
+  const facing=mode==='selfie'?'user':'environment';
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({
+      video:{facingMode:{ideal:facing},width:{ideal:2048},height:{ideal:1536}},audio:false
+    });
+    document.getElementById('cam-video').srcObject=camStream;
+    await document.getElementById('cam-video').play();
+    document.getElementById('cam-screen').classList.add('show');
+  } catch(err){
+    const msg='No se pudo acceder a la camara.\n\n'+
+      'Verifica:\n• Permisos de camara en el navegador\n• El archivo debe abrirse en Chrome o Safari\n\nError: '+err.message;
+    alert(msg);
+    setActionIdle();
+  }
+}
+function stopCam(){if(camStream){camStream.getTracks().forEach(t=>t.stop());camStream=null;}}
+function closeCamera(){
+  stopCam();
+  document.getElementById('cam-screen').classList.remove('show');
+  document.getElementById('cam-sending').classList.remove('show');
+  setActionIdle();
+}
+async function captureNow(){
+  const video=document.getElementById('cam-video');
+  const canvas=document.getElementById('snap-cv');
+  canvas.width=video.videoWidth;canvas.height=video.videoHeight;
+  canvas.getContext('2d').drawImage(video,0,0);
+  const flash=document.getElementById('cam-flash');
+  flash.classList.add('flash');setTimeout(()=>flash.classList.remove('flash'),180);
+  document.getElementById('cam-sending').classList.add('show');
+  canvas.toBlob(async(blob)=>{
+    const ts=new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+    const prefix={photo:'foto',scan:'escan',selfie:'selfie'}[camMode]||'captura';
+    const name=prefix+'-'+ts+'.jpg';
+    document.getElementById('ph-prog').style.display='block';
+    await sendBlob(blob,name,'image/jpeg');
+    countSent();
+    setTimeout(()=>{document.getElementById('cam-sending').classList.remove('show');closeCamera();setActionDone('✅','Foto enviada al PC','El operador la recibio.\n\nEsperando siguiente instruccion...');document.getElementById('ph-prog').style.display='none';},700);
+  },'image/jpeg',0.88);
+}
+
+// ─── FILE PICKER ─────────────────────────────────
+async function onFilePicked(files){
+  if(!files||!files.length)return;
+  document.getElementById('ph-prog').style.display='block';
+  for(const file of files){
+    setActionDone('📤','Enviando archivo',file.name+'\n'+fmt(file.size));
+    document.getElementById('ph-prog-name').textContent=file.name;
+    await sendBlob(file,file.name,file.type);
+    countSent();
+  }
+  document.getElementById('ph-prog').style.display='none';
+  setActionDone('✅','Archivo(s) enviados al PC','El operador los recibio.\n\nEsperando siguiente instruccion...');
+  document.getElementById('ph-file-in').value='';
+}
+
+function countSent(){
+  sentCount++;
+  document.getElementById('ph-sent-count').style.display='block';
+  document.getElementById('ph-sent-count').textContent=sentCount+' archivo'+(sentCount>1?'s':'')+' enviados en esta sesion';
+}
+
+// ─── SEND ENGINE ─────────────────────────────────
+async function sendBlob(blob,name,mime){
+  const CHUNK=16384;
+  conn.send(JSON.stringify({t:'meta',name,size:blob.size,mime}));
+  const buf=await blob.arrayBuffer();
+  let off=0;
+  while(off<buf.byteLength){
+    const chunk=buf.slice(off,off+CHUNK);
+    conn.send(chunk);
+    off+=chunk.byteLength;
+    const pct=Math.min(Math.round(off/buf.byteLength*100),100);
+    const fill=document.getElementById('ph-prog-fill');
+    const pctEl=document.getElementById('ph-prog-pct');
+    if(fill)fill.style.width=pct+'%';
+    if(pctEl)pctEl.textContent=pct+'%';
+    await new Promise(r=>setTimeout(r,3));
+  }
+  conn.send(JSON.stringify({t:'done',name}));
+}
+</script>
+</body>
+</html>
