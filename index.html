@@ -858,13 +858,19 @@ select.fi{cursor:pointer}
           <div class="cfg-label">RFC</div>
           <div class="cfg-val monospace" id="cfg-rfc">—</div>
         </div>
-        <div class="cfg-row">
-          <div class="cfg-label">WhatsApp Admin</div>
-          <div class="cfg-val" id="cfg-wa">—</div>
+        <div class="cfg-row" onclick="showModal('modal-edit-contacto')" style="cursor:pointer">
+          <div>
+            <div class="cfg-label">WhatsApp Admin</div>
+            <div class="cfg-val" id="cfg-wa">—</div>
+          </div>
+          <div class="cfg-arrow">›</div>
         </div>
-        <div class="cfg-row">
-          <div class="cfg-label">Email Admin</div>
-          <div class="cfg-val" id="cfg-email">—</div>
+        <div class="cfg-row" onclick="showModal('modal-edit-contacto')" style="cursor:pointer">
+          <div>
+            <div class="cfg-label">Email Admin</div>
+            <div class="cfg-val" id="cfg-email">—</div>
+          </div>
+          <div class="cfg-arrow">›</div>
         </div>
       </div>
 
@@ -989,6 +995,26 @@ select.fi{cursor:pointer}
   </div>
 </div>
 
+<!-- Editar contacto admin -->
+<div class="modal-overlay" id="modal-edit-contacto">
+  <div class="modal">
+    <div class="modal-title">✏️ Contacto del Admin</div>
+    <div class="modal-body">Actualiza los datos de contacto sin rehacer el perfil.</div>
+    <div class="fg">
+      <label class="fl">WhatsApp del administrador</label>
+      <input class="fi" id="edit-wa" placeholder="+521234567890" type="tel" />
+    </div>
+    <div class="fg">
+      <label class="fl">Email del administrador</label>
+      <input class="fi" id="edit-email" placeholder="admin@empresa.com" type="email" />
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal-edit-contacto')">Cancelar</button>
+      <button class="btn btn-p" onclick="saveContacto()">Guardar ✓</button>
+    </div>
+  </div>
+</div>
+
 <!-- Email compose modal -->
 <div class="modal-overlay" id="modal-email-compose">
   <div class="modal" style="max-height:88vh;overflow-y:auto">
@@ -1029,7 +1055,7 @@ select.fi{cursor:pointer}
       <button class="btn btn-g btn-sm" onclick="closeModal('modal-email-compose')">Cerrar</button>
       <button class="btn btn-g btn-sm" onclick="emailCopyBody()">📋 Copiar texto</button>
       <button class="btn btn-g btn-sm" onclick="emailDownloadAttachments()" id="email-dl-adj">⬇ Adjuntos</button>
-      <button class="btn btn-p btn-sm" onclick="emailOpenClient()">📬 Abrir correo</button>
+      <button class="btn btn-p btn-sm" onclick="emailOpenClient()">📩 Descargar .eml</button>
     </div>
   </div>
 </div>
@@ -1646,11 +1672,28 @@ function emailCopyBody() {
 }
 
 function emailOpenClient() {
-  const subj = encodeURIComponent(document.getElementById('email-modal-subj').textContent);
-  const body = encodeURIComponent(document.getElementById('email-modal-body').value);
-  const to   = profile?.admin_email || '';
-  window.open('mailto:' + to + '?subject=' + subj + '&body=' + body, '_blank');
-  toast('Abriendo cliente de correo...', 'i');
+  // Generar archivo .eml — evita problemas de charset con mailto: directo
+  const to      = profile?.admin_email || '';
+  const subject = document.getElementById('email-modal-subj').textContent;
+  const body    = document.getElementById('email-modal-body').value;
+
+  const eml =
+    'To: ' + to + '\r\n'
+    + 'Subject: ' + subject + '\r\n'
+    + 'MIME-Version: 1.0\r\n'
+    + 'Content-Type: text/plain; charset=UTF-8\r\n'
+    + 'Content-Transfer-Encoding: 8bit\r\n'
+    + '\r\n'
+    + body;
+
+  const blob = new Blob([eml], { type: 'message/rfc822' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'datalink-registro.eml';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Archivo .eml descargado — abrelo para enviarlo ✓', 's');
 }
 
 function emailDownloadAttachments() {
@@ -1972,7 +2015,24 @@ function showScreen(name) {
 //  MODAL
 // ══════════════════════════════════════════════════════
 function showModal(id) {
+  // Pre-fill edit-contacto modal with current values
+  if (id === 'modal-edit-contacto' && profile) {
+    document.getElementById('edit-wa').value    = profile.admin_wa    || '';
+    document.getElementById('edit-email').value = profile.admin_email || '';
+  }
   document.getElementById(id).classList.add('active');
+}
+
+function saveContacto() {
+  if (!profile) return;
+  const wa    = document.getElementById('edit-wa').value.trim();
+  const email = document.getElementById('edit-email').value.trim();
+  profile.admin_wa    = wa;
+  profile.admin_email = email;
+  saveProfile(profile);
+  renderHome();
+  closeModal('modal-edit-contacto');
+  toast('Contacto actualizado ✓', 's');
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('active');
