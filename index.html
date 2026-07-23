@@ -1133,11 +1133,28 @@ function getDeviceId() {
 // ══════════════════════════════════════════════════════
 function saveProfile(p) {
   profile = p;
-  localStorage.setItem('dla_profile', JSON.stringify(p));
+  // Guardar foto de perfil en clave separada para no bloquear saves posteriores
+  const toStore = { ...p };
+  if (toStore.foto) {
+    try { localStorage.setItem('dla_profile_foto', toStore.foto); } catch(e) {}
+    delete toStore.foto; // no incluir el base64 en el perfil principal
+  }
+  try {
+    localStorage.setItem('dla_profile', JSON.stringify(toStore));
+  } catch(e) {
+    console.error('saveProfile error:', e);
+    toast('Error al guardar perfil — almacenamiento lleno', 'e');
+  }
 }
+
 function loadProfile() {
   const raw = localStorage.getItem('dla_profile');
-  return raw ? JSON.parse(raw) : null;
+  if (!raw) return null;
+  const p = JSON.parse(raw);
+  // Reunir la foto por separado
+  const foto = localStorage.getItem('dla_profile_foto');
+  if (foto) p.foto = foto;
+  return p;
 }
 function saveRecords(recs) {
   records = recs;
@@ -1546,72 +1563,81 @@ async function submitCheckin() {
     toast('No puedes registrar — estás fuera del área', 'e');
     return;
   }
-  // Foto requerida SOLO si no hay ningún adjunto como evidencia
   const hasEvidence = attachments.length > 0;
   if (!photoB64 && !hasEvidence) {
     toast('Toma una selfie o adjunta evidencia antes de registrar', 'e');
     return;
-  }
-  if (!photoB64 && hasEvidence) {
-    // Evidencia adjunta — selfie opcional, continuar
   }
 
   const btn = document.getElementById('ci-submit-btn');
   btn.disabled = true;
   btn.textContent = 'Firmando registro...';
 
-  const now = new Date();
-  const record = {
-    id:             crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36),
-    version:        VERSION,
-    device_id:      deviceId,
-    empleado_nombre: profile.nombre,
-    empleado_cargo:  profile.cargo,
-    empleado_empresa: profile.empresa,
-    empleado_rfc:    profile.rfc,
-    empleado_curp:   profile.curp || '',
-    tipo:           currentTipo,
-    timestamp:      now.toISOString(),
-    timestamp_local: now.toLocaleDateString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric' })
-                    + ' ' + now.toLocaleTimeString('es-MX'),
-    lat:            gpsData?.lat || null,
-    lng:            gpsData?.lng || null,
-    precision_m:    gpsData?.acc || null,
-    foto_selfie:    photoB64,
-    modo:           (exencion && new Date().toISOString().slice(0,10) >= exencion.from
-                      && new Date().toISOString().slice(0,10) <= exencion.to) ? 'remoto_autorizado' : profile.modo,
-    codigo_exencion: exencion?.code || null,
-    notas:          document.getElementById('ci-notes').value.trim(),
-    adjuntos:       attachments.map(a => ({ name:a.name, size:a.size, kind:a.kind, files_count:a.files_count||null })),
-    hash_sha256:    null,
-  };
+  try {
+    const now = new Date();
+    const today = now.toISOString().slice(0,10);
+    const modoActual = (exencion && today >= exencion.from && today <= exencion.to)
+      ? 'remoto_autorizado' : profile.modo;
 
-  // Sign: hash everything except the hash field itself
-  const sigStr = JSON.stringify({ ...record, foto_selfie: '[foto]' });
-  record.hash_sha256 = await sha256(sigStr);
+    const record = {
+      id:               crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36),
+      version:          VERSION,
+      device_id:        deviceId,
+      empleado_nombre:  profile.nombre,
+      empleado_cargo:   profile.cargo,
+      empleado_empresa: profile.empresa,
+      empleado_rfc:     profile.rfc,
+      empleado_curp:    profile.curp || '',
+      tipo:             currentTipo,
+      timestamp:        now.toISOString(),
+      timestamp_local:  now.toLocaleDateString('es-MX',{ day:'2-digit', month:'2-digit', year:'numeric' })
+                        + ' ' + now.toLocaleTimeString('es-MX'),
+      lat:              gpsData?.lat || null,
+      lng:              gpsData?.lng || null,
+      precision_m:      gpsData?.acc || null,
+      tiene_foto:       !!photoB64,   // solo el flag, no el base64
+      modo:             modoActual,
+      codigo_exencion:  exencion?.code || null,
+      notas:            document.getElementById('ci-notes').value.trim(),
+      adjuntos:         attachments.map(a => ({ name:a.name, size:a.size, kind:a.kind, files_count:a.files_count||null })),
+      hash_sha256:      null,
+    };
 
-  // Save
-  const recs = loadRecords();
-  recs.unshift(record);
-  saveRecords(recs);
-  lastRecord = record;
+    // SHA-256 sobre los metadatos (la foto no se incluye en el hash para evitar el freeze)
+    const sigStr = JSON.stringify({ ...record, foto_selfie: photoB64 ? '[foto_incluida]' : '[sin_foto]' });
+    record.hash_sha256 = await sha256(sigStr);
 
-  stopCamera();
-  showScreen('home');
-  renderHome();
-  renderHistorial();
+    // Guardar en localStorage SIN la foto (evita el freeze)
+    const recs = loadRecords();
+    recs.unshift(record);
+    saveRecords(recs);
 
-  // Show success modal
-  const meta = TIPO_META[currentTipo];
-  document.getElementById('modal-success-body').innerHTML =
-    '<strong>' + meta.icon + ' ' + meta.label + '</strong><br>'
-    + now.toLocaleString('es-MX') + '<br>'
-    + (gpsData ? ('📍 ' + gpsData.lat.toFixed(4) + ', ' + gpsData.lng.toFixed(4)) : '📍 Sin GPS');
-  document.getElementById('modal-hash').textContent = record.hash_sha256;
-  showModal('modal-success');
+    // Mantener foto en memoria solo para compartir en esta sesión
+    lastRecord  = { ...record, foto_selfie: photoB64 };
 
-  btn.disabled = false;
-  btn.textContent = 'Registrar y firmar ✓';
+    stopCamera();
+    showScreen('home');
+    renderHome();
+    renderHistorial();
+
+    // Modal de éxito
+    const meta = TIPO_META[currentTipo];
+    document.getElementById('modal-success-body').innerHTML =
+      '<strong>' + meta.icon + ' ' + meta.label + '</strong><br>'
+      + now.toLocaleString('es-MX') + '<br>'
+      + (gpsData ? '📍 <a href="https://maps.google.com/?q='
+        + gpsData.lat.toFixed(6) + ',' + gpsData.lng.toFixed(6)
+        + '" target="_blank" style="color:var(--cyan)">Ver en mapa</a>' : '📍 Sin GPS');
+    document.getElementById('modal-hash').textContent = record.hash_sha256;
+    showModal('modal-success');
+
+  } catch(err) {
+    console.error('submitCheckin error:', err);
+    toast('Error al guardar el registro — intenta de nuevo', 'e');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Registrar y firmar ✓';
+  }
 }
 
 // ══════════════════════════════════════════════════════
@@ -1982,7 +2008,7 @@ function deleteRecord(idx) {
 //  WIPE
 // ══════════════════════════════════════════════════════
 function wipeDevice() {
-  localStorage.clear();
+  localStorage.clear(); // limpia todo incluyendo dla_profile_foto
   closeModal('modal-wipe');
   toast('Todos los datos eliminados', 'i');
   setTimeout(() => location.reload(), 1200);
@@ -2029,10 +2055,14 @@ function saveContacto() {
   const email = document.getElementById('edit-email').value.trim();
   profile.admin_wa    = wa;
   profile.admin_email = email;
-  saveProfile(profile);
-  renderHome();
-  closeModal('modal-edit-contacto');
-  toast('Contacto actualizado ✓', 's');
+  try {
+    saveProfile(profile);
+    renderHome();
+    closeModal('modal-edit-contacto');
+    toast('Contacto actualizado ✓', 's');
+  } catch(e) {
+    toast('Error al guardar — intenta de nuevo', 'e');
+  }
 }
 function closeModal(id) {
   document.getElementById(id).classList.remove('active');
