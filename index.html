@@ -989,6 +989,51 @@ select.fi{cursor:pointer}
   </div>
 </div>
 
+<!-- Email compose modal -->
+<div class="modal-overlay" id="modal-email-compose">
+  <div class="modal" style="max-height:88vh;overflow-y:auto">
+    <div class="modal-title">📧 Enviar por correo</div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:14px">
+      Copia el texto y pégalo en tu app de correo, o toca "Abrir correo" para que se pre-llene automáticamente.
+    </div>
+
+    <div class="fg">
+      <label class="fl">Para</label>
+      <div class="fi" style="font-size:13px;padding:10px 14px;cursor:default" id="email-modal-to">—</div>
+    </div>
+    <div class="fg">
+      <label class="fl">Asunto</label>
+      <div class="fi" style="font-size:12px;padding:10px 14px;cursor:default;word-break:break-all" id="email-modal-subj">—</div>
+    </div>
+    <div class="fg">
+      <label class="fl">Cuerpo del mensaje</label>
+      <textarea class="notes-area" id="email-modal-body" style="min-height:160px;font-size:11px;font-family:monospace;resize:vertical" readonly></textarea>
+    </div>
+
+    <!-- Foto preview -->
+    <div id="email-modal-foto" style="display:none;margin-bottom:12px">
+      <label class="fl">Foto del registro</label>
+      <div style="display:flex;align-items:center;gap:10px">
+        <img id="email-modal-foto-img" style="width:64px;height:64px;border-radius:8px;object-fit:cover;border:1px solid var(--border)" alt="foto">
+        <div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:6px">Los clientes de correo no aceptan fotos incrustadas — descárgala y adjúntala manualmente.</div>
+          <button class="btn btn-g btn-sm" style="width:auto;padding:6px 12px" onclick="emailDownloadFoto()">⬇ Descargar foto</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Adjuntos -->
+    <div id="email-modal-adjcount" style="font-size:11px;color:var(--amber);margin-bottom:10px"></div>
+
+    <div class="btn-row" style="flex-wrap:wrap;gap:8px">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal-email-compose')">Cerrar</button>
+      <button class="btn btn-g btn-sm" onclick="emailCopyBody()">📋 Copiar texto</button>
+      <button class="btn btn-g btn-sm" onclick="emailDownloadAttachments()" id="email-dl-adj">⬇ Adjuntos</button>
+      <button class="btn btn-p btn-sm" onclick="emailOpenClient()">📬 Abrir correo</button>
+    </div>
+  </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -1330,12 +1375,18 @@ async function finishSetup() {
 //  CAMERA
 // ══════════════════════════════════════════════════════
 async function startCamera() {
+  // Recepción usa cámara trasera; todos los demás usan frontal (selfie)
+  const useRear = currentTipo === 'recepcion';
+  const facing  = useRear ? 'environment' : 'user';
   try {
     videoStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+      video: { facingMode: { ideal: facing }, width:{ ideal:640 }, height:{ ideal:640 } },
       audio: false
     });
-    document.getElementById('video-preview').srcObject = videoStream;
+    const videoEl = document.getElementById('video-preview');
+    videoEl.srcObject = videoStream;
+    // Mirror only for front camera (selfie); rear stays natural
+    videoEl.style.transform = useRear ? 'none' : 'scaleX(-1)';
     document.getElementById('cam-wrap').style.display = 'block';
     document.getElementById('photo-prev').style.display = 'none';
     document.getElementById('retake-btn').style.display = 'none';
@@ -1359,9 +1410,13 @@ function capturePhoto() {
   const size   = Math.min(video.videoWidth, video.videoHeight);
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d');
+  const useRear = currentTipo === 'recepcion';
   ctx.save();
-  ctx.translate(size, 0);
-  ctx.scale(-1, 1);
+  if (!useRear) {
+    // Mirror selfie to match what user sees
+    ctx.translate(size, 0);
+    ctx.scale(-1, 1);
+  }
   ctx.drawImage(video, (video.videoWidth - size) / 2, (video.videoHeight - size) / 2, size, size, 0, 0, size, size);
   ctx.restore();
   photoB64 = canvas.toDataURL('image/jpeg', 0.7);
@@ -1534,80 +1589,128 @@ async function submitCheckin() {
 }
 
 // ══════════════════════════════════════════════════════
-//  SHARE EMAIL
+//  SHARE EMAIL — modal de copia (evita caracteres raros de mailto)
 // ══════════════════════════════════════════════════════
 function shareEmail() {
   if (!lastRecord || !profile) return;
   const meta    = TIPO_META[lastRecord.tipo];
   const adjList = lastRecord.adjuntos?.length
     ? '\n\nADJUNTOS (' + lastRecord.adjuntos.length + '):\n'
-      + lastRecord.adjuntos.map(a => '  • ' + a.name + (a.files_count ? ' (' + a.files_count + ' archivos)' : '')).join('\n')
+      + lastRecord.adjuntos.map(a => '  * ' + a.name + (a.files_count ? ' (' + a.files_count + ' archivos)' : '')).join('\n')
     : '';
-  const subject = encodeURIComponent(
-    '[DataLink] ' + meta.label.toUpperCase() + ' — ' + lastRecord.empleado_nombre
-    + ' — ' + lastRecord.timestamp_local
-  );
-  const body = encodeURIComponent(
-    'DATALINK ASISTENCIA — Registro de ' + meta.label + '\n'
-    + '═══════════════════════════════════\n'
+  const mapsLink = lastRecord.lat
+    ? 'https://maps.google.com/?q=' + lastRecord.lat.toFixed(6) + ',' + lastRecord.lng.toFixed(6)
+    : null;
+
+  const bodyText =
+    'DATALINK ASISTENCIA - Registro de ' + meta.label.toUpperCase() + '\n'
+    + '===================================\n'
     + 'Empleado : ' + lastRecord.empleado_nombre + '\n'
     + 'Cargo    : ' + lastRecord.empleado_cargo + '\n'
     + 'Empresa  : ' + lastRecord.empleado_empresa + '\n'
-    + 'RFC      : ' + (lastRecord.empleado_rfc || '—') + '\n'
-    + 'Evento   : ' + meta.icon + ' ' + meta.label + '\n'
+    + 'RFC      : ' + (lastRecord.empleado_rfc || '-') + '\n'
+    + 'Evento   : ' + meta.label + '\n'
     + 'Fecha    : ' + lastRecord.timestamp_local + '\n'
-    + 'Modo     : ' + (lastRecord.modo || '—') + '\n'
-    + (lastRecord.lat ? 'GPS      : ' + lastRecord.lat.toFixed(5) + ', ' + lastRecord.lng.toFixed(5) + '\n' : 'GPS      : Sin señal\n')
+    + 'Modo     : ' + (lastRecord.modo || '-') + '\n'
+    + (mapsLink ? 'Ubicacion: ' + mapsLink + '\n' : 'Ubicacion: Sin senal GPS\n')
     + (lastRecord.notas ? 'Notas    : ' + lastRecord.notas + '\n' : '')
     + adjList + '\n'
-    + '═══════════════════════════════════\n'
+    + '===================================\n'
     + 'FIRMA SHA-256:\n' + lastRecord.hash_sha256 + '\n'
-    + '═══════════════════════════════════\n'
-    + 'Registro generado con DataLink Asistencia v' + VERSION + '\n'
-    + 'Device ID: ' + deviceId
-  );
-  const email = profile.admin_email || '';
-  window.open('mailto:' + email + '?subject=' + subject + '&body=' + body, '_blank');
+    + '===================================\n'
+    + 'Generado con DataLink Asistencia v' + VERSION + '\n'
+    + 'Device ID: ' + deviceId;
 
-  // If there are file attachments, trigger download so user can attach manually
-  if (lastRecord.adjuntos?.length) {
-    toast('Descargando adjuntos para que los agregues al correo ✓', 'i');
-    downloadLastAttachments();
-  }
+  const subjectText = '[DataLink] ' + meta.label.toUpperCase()
+    + ' - ' + lastRecord.empleado_nombre
+    + ' - ' + lastRecord.timestamp_local;
+
+  // Mostrar modal de email
+  document.getElementById('email-modal-to').textContent    = profile.admin_email || '(sin email configurado)';
+  document.getElementById('email-modal-subj').textContent  = subjectText;
+  document.getElementById('email-modal-body').value        = bodyText;
+  document.getElementById('email-modal-foto').style.display = photoB64 ? 'block' : 'none';
+  if (photoB64) document.getElementById('email-modal-foto-img').src = photoB64;
+  document.getElementById('email-modal-adjcount').textContent =
+    lastRecord.adjuntos?.length ? lastRecord.adjuntos.length + ' adjunto(s) — descarga al pie' : '';
+  showModal('modal-email-compose');
 }
 
-function downloadLastAttachments() {
-  // Download each attachment so user can attach to email manually
+function emailCopyBody() {
+  const ta = document.getElementById('email-modal-body');
+  ta.select();
+  try { document.execCommand('copy'); } catch(e) {
+    navigator.clipboard?.writeText(ta.value);
+  }
+  toast('Texto copiado al portapapeles ✓', 's');
+}
+
+function emailOpenClient() {
+  const subj = encodeURIComponent(document.getElementById('email-modal-subj').textContent);
+  const body = encodeURIComponent(document.getElementById('email-modal-body').value);
+  const to   = profile?.admin_email || '';
+  window.open('mailto:' + to + '?subject=' + subj + '&body=' + body, '_blank');
+  toast('Abriendo cliente de correo...', 'i');
+}
+
+function emailDownloadAttachments() {
+  if (!attachments.length) { toast('Sin adjuntos en este registro', 'w'); return; }
   attachments.forEach(a => {
     if (!a.data) return;
     const link = document.createElement('a');
-    link.href     = a.data;
-    link.download = a.name;
-    link.click();
+    link.href = a.data; link.download = a.name; link.click();
   });
+  toast('Descargando ' + attachments.length + ' adjunto(s) ✓', 's');
+}
+
+function emailDownloadFoto() {
+  if (!photoB64) return;
+  const link = document.createElement('a');
+  link.href = photoB64;
+  link.download = 'foto-' + (lastRecord?.tipo || 'registro') + '-' + Date.now() + '.jpg';
+  link.click();
+  toast('Foto descargada ✓', 's');
 }
 
 // ══════════════════════════════════════════════════════
-//  SHARE WHATSAPP
+//  SHARE WHATSAPP — con link de mapa en lugar de coordenadas
 // ══════════════════════════════════════════════════════
 function shareWhatsApp() {
   if (!lastRecord || !profile) return;
-  const meta = TIPO_META[lastRecord.tipo];
+  const meta     = TIPO_META[lastRecord.tipo];
+  const mapsLink = lastRecord.lat
+    ? 'https://maps.google.com/?q=' + lastRecord.lat.toFixed(6) + ',' + lastRecord.lng.toFixed(6)
+    : null;
+  const adjInfo  = lastRecord.adjuntos?.length
+    ? '📎 Adjuntos: ' + lastRecord.adjuntos.length + ' archivo(s)\n'
+    : '';
   const msg = encodeURIComponent(
-    '📋 *DataLink Asistencia — Registro*\n'
-    + '─────────────────\n'
+    '📋 *DataLink Asistencia*\n'
     + meta.icon + ' *' + meta.label.toUpperCase() + '*\n'
+    + '─────────────────\n'
     + '👤 ' + lastRecord.empleado_nombre + '\n'
     + '🏢 ' + lastRecord.empleado_empresa + '\n'
     + '💼 ' + lastRecord.empleado_cargo + '\n'
     + '📅 ' + lastRecord.timestamp_local + '\n'
-    + (lastRecord.lat ? '📍 ' + lastRecord.lat.toFixed(5) + ', ' + lastRecord.lng.toFixed(5) + '\n' : '')
-    + '🔐 Hash: ' + lastRecord.hash_sha256.slice(0, 20) + '...\n'
+    + (mapsLink ? '📍 ' + mapsLink + '\n' : '')
+    + adjInfo
+    + '🔐 ' + lastRecord.hash_sha256.slice(0,16) + '...\n'
     + '─────────────────\n'
-    + '✅ Firmado con SHA-256 · DataLink Asistencia v' + VERSION
+    + '✅ DataLink Asistencia v' + VERSION
   );
   const wa = profile.admin_wa ? profile.admin_wa.replace(/\D/g,'') : '';
   window.open('https://wa.me/' + wa + '?text=' + msg, '_blank');
+
+  // Si hay foto, ofrecer descargarla para mandar por separado
+  if (photoB64) {
+    toast('Abriendo WhatsApp... Descarga la foto para adjuntarla', 'i');
+    setTimeout(() => {
+      const link = document.createElement('a');
+      link.href = photoB64;
+      link.download = 'foto-' + lastRecord.tipo + '-' + Date.now() + '.jpg';
+      link.click();
+    }, 800);
+  }
 }
 
 // ══════════════════════════════════════════════════════
