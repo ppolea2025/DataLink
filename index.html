@@ -435,7 +435,9 @@ select.fi{cursor:pointer}
           <div class="fg"><label class="fl">Nombre de la empresa</label>
             <input class="fi" id="s-empresa" placeholder="Mi Empresa S.A. de C.V." /></div>
           <div class="fg"><label class="fl">WhatsApp del administrador</label>
-            <input class="fi" id="s-wa" placeholder="+525534938628" type="tel" /></div>
+            <input class="fi" id="s-wa" placeholder="+521234567890" type="tel" /></div>
+          <div class="fg"><label class="fl">Email del administrador</label>
+            <input class="fi" id="s-email" placeholder="admin@empresa.com" type="email" /></div>
           <div class="fg"><label class="fl">Clave secreta de empresa (te la da el admin)</label>
             <input class="fi" id="s-secret" placeholder="Clave proporcionada por tu administrador" type="password" /></div>
           <div class="btn-row">
@@ -735,43 +737,80 @@ select.fi{cursor:pointer}
     <!-- ── RECURSOS ── -->
     <div class="screen" id="screen-recursos">
       <div class="sec-title">Kit de Recursos</div>
-      <div class="info-box">Los recursos son cargados por tu administrador. Cuando estén disponibles aparecerán aquí para revisión y firma.</div>
 
-      <div class="res-card">
+      <!-- Repositorio de archivos de la empresa -->
+      <div class="attach-section" style="margin-bottom:14px">
+        <div class="attach-title">📁 Repositorio de archivos</div>
+        <div class="info-box" style="margin-bottom:10px">
+          Sube aquí los archivos de trabajo de tu empresa — reglamentos, manuales, formatos, contratos. Quedan guardados en este dispositivo.
+        </div>
+        <div class="attach-btns" style="grid-template-columns:1fr 1fr">
+          <div class="attach-btn" onclick="document.getElementById('res-file-input').click()">
+            <div class="attach-btn-icon">📄</div>
+            <div class="attach-btn-label">Subir archivos</div>
+            <div class="attach-btn-sub">PDF, Word, Excel…</div>
+          </div>
+          <div class="attach-btn" onclick="document.getElementById('res-folder-input').click()">
+            <div class="attach-btn-icon">📁</div>
+            <div class="attach-btn-label">Subir carpeta</div>
+            <div class="attach-btn-sub">Todo el contenido</div>
+          </div>
+        </div>
+        <input type="file" id="res-file-input" multiple style="display:none" onchange="handleResFiles(this.files)" />
+        <input type="file" id="res-folder-input" multiple webkitdirectory style="display:none" onchange="handleResFolder(this.files)" />
+        <div class="attach-progress" id="res-progress" style="display:none">
+          <div class="attach-progress-fill" id="res-progress-fill"></div>
+        </div>
+        <div id="res-file-list" style="margin-top:10px"></div>
+      </div>
+
+      <!-- Recursos fijos de empresa -->
+      <div class="sec-title">Documentos oficiales</div>
+
+      <div class="res-card" style="cursor:pointer" onclick="openResDoc('reglamento')">
         <div class="res-icon">📋</div>
-        <div>
+        <div style="flex:1">
           <div class="res-title">Reglamento Interno</div>
-          <div class="res-sub">Reglamento de Trabajo registrado ante STPS</div>
+          <div class="res-sub" id="res-sub-reglamento">Sin archivo — toca para agregar</div>
         </div>
-        <div class="res-right"><div class="res-badge-lock">PENDIENTE</div></div>
+        <div class="res-right">
+          <div class="res-badge-lock" id="res-badge-reglamento">PENDIENTE</div>
+        </div>
       </div>
 
-      <div class="res-card">
+      <div class="res-card" style="cursor:pointer" onclick="openResDoc('onboarding')">
         <div class="res-icon">🎓</div>
-        <div>
+        <div style="flex:1">
           <div class="res-title">Onboarding</div>
-          <div class="res-sub">Checklist de inducción a la empresa</div>
+          <div class="res-sub" id="res-sub-onboarding">Sin archivo — toca para agregar</div>
         </div>
-        <div class="res-right"><div class="res-badge-lock">PENDIENTE</div></div>
+        <div class="res-right">
+          <div class="res-badge-lock" id="res-badge-onboarding">PENDIENTE</div>
+        </div>
       </div>
 
-      <div class="res-card">
+      <div class="res-card" style="cursor:pointer" onclick="openResDoc('cursos')">
         <div class="res-icon">📚</div>
-        <div>
+        <div style="flex:1">
           <div class="res-title">Cursos DC-3 / DC-4</div>
-          <div class="res-sub">Capacitación registrada ante STPS</div>
+          <div class="res-sub" id="res-sub-cursos">Sin archivo — toca para agregar</div>
         </div>
-        <div class="res-right"><div class="res-badge-lock">PENDIENTE</div></div>
+        <div class="res-right">
+          <div class="res-badge-lock" id="res-badge-cursos">PENDIENTE</div>
+        </div>
       </div>
 
-      <div class="res-card">
+      <div class="res-card" style="cursor:pointer" onclick="showScreen('id')">
         <div class="res-icon">🪪</div>
-        <div>
+        <div style="flex:1">
           <div class="res-title">ID Virtual</div>
           <div class="res-sub">Tu credencial digital de la empresa</div>
         </div>
         <div class="res-right"><div class="res-badge-ok">DISPONIBLE</div></div>
       </div>
+
+      <!-- Hidden file inputs for official docs -->
+      <input type="file" id="res-doc-input" accept=".pdf,.doc,.docx" style="display:none" onchange="handleResDocUpload(this)" />
     </div>
 
     <!-- ── SETTINGS ── -->
@@ -822,6 +861,10 @@ select.fi{cursor:pointer}
         <div class="cfg-row">
           <div class="cfg-label">WhatsApp Admin</div>
           <div class="cfg-val" id="cfg-wa">—</div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label">Email Admin</div>
+          <div class="cfg-val" id="cfg-email">—</div>
         </div>
       </div>
 
@@ -940,7 +983,8 @@ select.fi{cursor:pointer}
     </div>
     <div class="btn-row">
       <button class="btn btn-g btn-sm" onclick="closeModal('modal-success');showScreen('home')">Cerrar</button>
-      <button class="btn btn-p" onclick="shareWhatsApp()" id="wa-share-btn">📱 Enviar por WhatsApp</button>
+      <button class="btn btn-p btn-sm" onclick="shareWhatsApp()" id="wa-share-btn">📱 WhatsApp</button>
+      <button class="btn btn-g btn-sm" onclick="shareEmail()" id="email-share-btn">📧 Email</button>
     </div>
   </div>
 </div>
@@ -1262,6 +1306,7 @@ async function finishSetup() {
     curp:         document.getElementById('s-curp').value.trim().toUpperCase(),
     empresa:      document.getElementById('s-empresa').value.trim(),
     admin_wa:     document.getElementById('s-wa').value.trim(),
+    admin_email:  document.getElementById('s-email').value.trim(),
     secret:       document.getElementById('s-secret').value.trim(),
     modo:         document.getElementById('s-modo').value,
     empresa_lat:  parseFloat(document.getElementById('s-lat').value) || null,
@@ -1420,9 +1465,14 @@ async function submitCheckin() {
     toast('No puedes registrar — estás fuera del área', 'e');
     return;
   }
-  if (!photoB64) {
-    toast('Toma una foto primero', 'e');
+  // Foto requerida SOLO si no hay ningún adjunto como evidencia
+  const hasEvidence = attachments.length > 0;
+  if (!photoB64 && !hasEvidence) {
+    toast('Toma una selfie o adjunta evidencia antes de registrar', 'e');
     return;
+  }
+  if (!photoB64 && hasEvidence) {
+    // Evidencia adjunta — selfie opcional, continuar
   }
 
   const btn = document.getElementById('ci-submit-btn');
@@ -1481,6 +1531,60 @@ async function submitCheckin() {
 
   btn.disabled = false;
   btn.textContent = 'Registrar y firmar ✓';
+}
+
+// ══════════════════════════════════════════════════════
+//  SHARE EMAIL
+// ══════════════════════════════════════════════════════
+function shareEmail() {
+  if (!lastRecord || !profile) return;
+  const meta    = TIPO_META[lastRecord.tipo];
+  const adjList = lastRecord.adjuntos?.length
+    ? '\n\nADJUNTOS (' + lastRecord.adjuntos.length + '):\n'
+      + lastRecord.adjuntos.map(a => '  • ' + a.name + (a.files_count ? ' (' + a.files_count + ' archivos)' : '')).join('\n')
+    : '';
+  const subject = encodeURIComponent(
+    '[DataLink] ' + meta.label.toUpperCase() + ' — ' + lastRecord.empleado_nombre
+    + ' — ' + lastRecord.timestamp_local
+  );
+  const body = encodeURIComponent(
+    'DATALINK ASISTENCIA — Registro de ' + meta.label + '\n'
+    + '═══════════════════════════════════\n'
+    + 'Empleado : ' + lastRecord.empleado_nombre + '\n'
+    + 'Cargo    : ' + lastRecord.empleado_cargo + '\n'
+    + 'Empresa  : ' + lastRecord.empleado_empresa + '\n'
+    + 'RFC      : ' + (lastRecord.empleado_rfc || '—') + '\n'
+    + 'Evento   : ' + meta.icon + ' ' + meta.label + '\n'
+    + 'Fecha    : ' + lastRecord.timestamp_local + '\n'
+    + 'Modo     : ' + (lastRecord.modo || '—') + '\n'
+    + (lastRecord.lat ? 'GPS      : ' + lastRecord.lat.toFixed(5) + ', ' + lastRecord.lng.toFixed(5) + '\n' : 'GPS      : Sin señal\n')
+    + (lastRecord.notas ? 'Notas    : ' + lastRecord.notas + '\n' : '')
+    + adjList + '\n'
+    + '═══════════════════════════════════\n'
+    + 'FIRMA SHA-256:\n' + lastRecord.hash_sha256 + '\n'
+    + '═══════════════════════════════════\n'
+    + 'Registro generado con DataLink Asistencia v' + VERSION + '\n'
+    + 'Device ID: ' + deviceId
+  );
+  const email = profile.admin_email || '';
+  window.open('mailto:' + email + '?subject=' + subject + '&body=' + body, '_blank');
+
+  // If there are file attachments, trigger download so user can attach manually
+  if (lastRecord.adjuntos?.length) {
+    toast('Descargando adjuntos para que los agregues al correo ✓', 'i');
+    downloadLastAttachments();
+  }
+}
+
+function downloadLastAttachments() {
+  // Download each attachment so user can attach to email manually
+  attachments.forEach(a => {
+    if (!a.data) return;
+    const link = document.createElement('a');
+    link.href     = a.data;
+    link.download = a.name;
+    link.click();
+  });
 }
 
 // ══════════════════════════════════════════════════════
@@ -1667,6 +1771,7 @@ function renderHome() {
   setEl('cfg-modo', profile.modo === 'presencial' ? 'Presencial (geofencing)' : 'Remoto permanente');
   setEl('cfg-rfc', profile.rfc || '—');
   setEl('cfg-wa', profile.admin_wa || '—');
+  setEl('cfg-email', profile.admin_email || '—');
   setEl('cfg-device', deviceId);
   setEl('cfg-tok-exp', profile.token_expiry ? new Date(profile.token_expiry).toLocaleString('es-MX') : 'Sin token');
 }
@@ -1757,6 +1862,7 @@ function showScreen(name) {
 
   if (name === 'historial') renderHistorial();
   if (name === 'id')        renderIDCard();
+  if (name === 'recursos')  { renderResFiles(); renderResDocs(); }
 }
 
 // ══════════════════════════════════════════════════════
@@ -1966,6 +2072,161 @@ function formatSize(bytes) {
   if(bytes<1024) return bytes+' B';
   if(bytes<1048576) return (bytes/1024).toFixed(1)+' KB';
   return (bytes/1048576).toFixed(1)+' MB';
+}
+
+// ══════════════════════════════════════════════════════
+//  RECURSOS — FILE REPOSITORY
+// ══════════════════════════════════════════════════════
+function loadResFiles()    { return JSON.parse(localStorage.getItem('dla_res_files') || '[]'); }
+function saveResFiles(arr) { localStorage.setItem('dla_res_files', JSON.stringify(arr)); }
+function loadResDocs()     { return JSON.parse(localStorage.getItem('dla_res_docs') || '{}'); }
+function saveResDocs(obj)  { localStorage.setItem('dla_res_docs', JSON.stringify(obj)); }
+
+let currentResDoc = null; // which official doc slot is being uploaded
+
+async function handleResFiles(fileList) {
+  const files = Array.from(fileList);
+  const repo  = loadResFiles();
+  for (const f of files) {
+    const reader = new FileReader();
+    await new Promise(res => {
+      reader.onload = e => {
+        repo.push({ name:f.name, size:f.size, type:f.type, data:e.target.result,
+          uploaded: new Date().toISOString(), kind:'file' });
+        res();
+      };
+      reader.readAsDataURL(f);
+    });
+  }
+  saveResFiles(repo);
+  renderResFiles();
+  toast(files.length + (files.length===1?' archivo agregado':' archivos agregados') + ' ✓', 's');
+}
+
+async function handleResFolder(fileList) {
+  const files = Array.from(fileList);
+  document.getElementById('res-progress').style.display = 'block';
+  try {
+    const zip  = new JSZip();
+    for (let i = 0; i < files.length; i++) {
+      zip.file(files[i].webkitRelativePath || files[i].name, await files[i].arrayBuffer());
+      document.getElementById('res-progress-fill').style.width = Math.round((i+1)/files.length*85)+'%';
+    }
+    const zipBlob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},
+      m => { document.getElementById('res-progress-fill').style.width = (85+Math.round(m.percent*0.15))+'%'; });
+    const folderName = (files[0].webkitRelativePath||'carpeta').split('/')[0];
+    const zipName    = folderName + '-' + Date.now() + '.zip';
+    const reader = new FileReader();
+    reader.onload = e => {
+      const repo = loadResFiles();
+      repo.push({ name:zipName, size:zipBlob.size, type:'application/zip', data:e.target.result,
+        uploaded: new Date().toISOString(), kind:'folder_zip', files_count: files.length });
+      saveResFiles(repo);
+      renderResFiles();
+      toast(files.length + ' archivos comprimidos y guardados ✓', 's');
+      document.getElementById('res-progress').style.display = 'none';
+      document.getElementById('res-progress-fill').style.width = '0%';
+    };
+    reader.readAsDataURL(zipBlob);
+  } catch(e) {
+    toast('Error al comprimir carpeta','e');
+    document.getElementById('res-progress').style.display = 'none';
+  }
+}
+
+function renderResFiles() {
+  const repo = loadResFiles();
+  const list = document.getElementById('res-file-list');
+  if (!list) return;
+  const icon = { file:'📄', folder_zip:'📁' };
+  if (!repo.length) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">Sin archivos en el repositorio.</div>';
+    return;
+  }
+  list.innerHTML = repo.map((f,i) => `
+    <div class="attach-item" style="margin-bottom:6px">
+      <div class="attach-item-icon">${icon[f.kind]||'📎'}</div>
+      <div class="attach-item-name">${f.name}${f.files_count?' ('+f.files_count+' archivos)':''}</div>
+      <div class="attach-item-size">${formatSize(f.size)}</div>
+      <div class="attach-item-del" onclick="downloadResFile(${i})" title="Descargar" style="color:var(--cyan);margin-right:4px">⬇</div>
+      <div class="attach-item-del" onclick="deleteResFile(${i})" title="Eliminar">✕</div>
+    </div>`).join('');
+}
+
+function downloadResFile(idx) {
+  const repo = loadResFiles();
+  const f    = repo[idx];
+  if (!f) return;
+  const a    = document.createElement('a');
+  a.href     = f.data;
+  a.download = f.name;
+  a.click();
+}
+
+function deleteResFile(idx) {
+  const repo = loadResFiles();
+  repo.splice(idx, 1);
+  saveResFiles(repo);
+  renderResFiles();
+  toast('Archivo eliminado','i');
+}
+
+// Official docs slots
+function openResDoc(slot) {
+  currentResDoc = slot;
+  document.getElementById('res-doc-input').click();
+}
+
+function handleResDocUpload(input) {
+  const file = input.files[0];
+  if (!file || !currentResDoc) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const docs = loadResDocs();
+    docs[currentResDoc] = { name:file.name, size:file.size, type:file.type,
+      data:e.target.result, uploaded:new Date().toISOString() };
+    saveResDocs(docs);
+    renderResDocs();
+    toast(file.name + ' cargado ✓','s');
+    currentResDoc = null;
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderResDocs() {
+  const docs = loadResDocs();
+  const slots = {
+    reglamento: { sub:'res-sub-reglamento', badge:'res-badge-reglamento' },
+    onboarding: { sub:'res-sub-onboarding', badge:'res-badge-onboarding' },
+    cursos:     { sub:'res-sub-cursos',     badge:'res-badge-cursos' },
+  };
+  for (const [key, el] of Object.entries(slots)) {
+    const sub   = document.getElementById(el.sub);
+    const badge = document.getElementById(el.badge);
+    if (!sub || !badge) continue;
+    if (docs[key]) {
+      sub.textContent   = docs[key].name + ' · ' + formatSize(docs[key].size);
+      badge.textContent = 'CARGADO';
+      badge.className   = 'res-badge-ok';
+      sub.style.cursor  = 'pointer';
+      sub.onclick       = () => downloadResDoc(key);
+    } else {
+      sub.textContent   = 'Sin archivo — toca para agregar';
+      badge.textContent = 'PENDIENTE';
+      badge.className   = 'res-badge-lock';
+    }
+  }
+}
+
+function downloadResDoc(key) {
+  const docs = loadResDocs();
+  const f    = docs[key];
+  if (!f) return;
+  const a    = document.createElement('a');
+  a.href     = f.data;
+  a.download = f.name;
+  a.click();
 }
 
 // ══════════════════════════════════════════════════════
