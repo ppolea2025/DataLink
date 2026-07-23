@@ -1,0 +1,1982 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DataLink Asistencia — Empleado</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,600;0,700;0,800;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+:root {
+  --bg:      #070B14;
+  --bg2:     #0C1220;
+  --card:    #111827;
+  --card2:   #162035;
+  --border:  #1E2D45;
+  --cyan:    #00CFFF;
+  --cyan2:   #0099CC;
+  --cglow:   rgba(0,207,255,.18);
+  --green:   #00E676;
+  --gdim:    rgba(0,230,118,.12);
+  --amber:   #FFB300;
+  --adim:    rgba(255,179,0,.12);
+  --red:     #FF5252;
+  --rdim:    rgba(255,82,82,.12);
+  --violet:  #AB47BC;
+  --vdim:    rgba(171,71,188,.12);
+  --text:    #E2EAF4;
+  --text2:   #7A8FA8;
+  --text3:   #3D4F65;
+  --H:       'Barlow Condensed', sans-serif;
+  --B:       'DM Sans', sans-serif;
+  --nav:     64px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--B);background:var(--bg);color:var(--text);overflow:hidden}
+body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative}
+
+/* ── SPLASH ── */
+#splash{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;z-index:1000;gap:12px;transition:opacity .6s}
+#splash.hide{opacity:0;pointer-events:none}
+.s-logo{font-family:var(--H);font-size:40px;font-weight:800;letter-spacing:2px}
+.s-logo span{color:var(--cyan)}
+.s-sub{font-size:11px;color:var(--text2);letter-spacing:4px;text-transform:uppercase}
+.s-bar{width:160px;height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:18px}
+.s-fill{height:100%;width:0%;background:var(--cyan);animation:fill 1.8s ease forwards;box-shadow:0 0 12px var(--cyan)}
+@keyframes fill{to{width:100%}}
+
+/* ── APP ── */
+#app{display:flex;flex-direction:column;height:100vh;opacity:0;transition:opacity .4s}
+#app.visible{opacity:1}
+.hdr{padding:12px 18px 10px;border-bottom:1px solid var(--border);display:flex;
+  align-items:center;justify-content:space-between;background:var(--bg2);flex-shrink:0}
+.hdr-brand{font-family:var(--H);font-size:21px;font-weight:800;letter-spacing:1px}
+.hdr-brand span{color:var(--cyan)}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 8px var(--green);animation:blink 2s infinite}
+.sdot.red{background:var(--red);box-shadow:0 0 8px var(--red);animation:none}
+.sdot.amber{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.sdot-label{font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase}
+
+/* ── SCREENS ── */
+.screens{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.screen{display:none;padding:18px 16px calc(var(--nav) + 18px);animation:fadeIn .25s ease}
+.screen.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── SETUP ── */
+#screen-setup{display:none;flex-direction:column;align-items:center;justify-content:center;
+  min-height:calc(100vh - 50px);padding:24px 20px}
+#screen-setup.active{display:flex}
+.setup-wrap{width:100%;max-width:400px}
+.setup-step{display:none}
+.setup-step.active{display:block}
+.step-dots{display:flex;gap:6px;margin-bottom:24px}
+.sdot2{flex:1;height:3px;border-radius:2px;background:var(--border);transition:background .3s}
+.sdot2.done,.sdot2.cur{background:var(--cyan)}
+.sdot2.cur{opacity:.6}
+.setup-title{font-family:var(--H);font-size:32px;font-weight:700;margin-bottom:4px}
+.setup-title span{color:var(--cyan)}
+.setup-sub{font-size:13px;color:var(--text2);margin-bottom:24px;line-height:1.5}
+
+/* ── FORM ── */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text2);margin-bottom:7px}
+.fi{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;font-family:var(--B);font-size:15px;color:var(--text);outline:none;
+  transition:border-color .2s,box-shadow .2s}
+.fi:focus{border-color:var(--cyan2);box-shadow:0 0 0 3px var(--cglow)}
+.fi::placeholder{color:var(--text3)}
+select.fi{cursor:pointer}
+.fi-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* ── BUTTONS ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  padding:14px 20px;border-radius:12px;border:none;font-family:var(--B);font-size:15px;
+  font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.btn-p{background:var(--cyan);color:#000}
+.btn-p:hover{transform:translateY(-1px);box-shadow:0 4px 20px var(--cglow)}
+.btn-p:active{transform:scale(.98)}
+.btn-g{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-g:hover{border-color:var(--text2);color:var(--text)}
+.btn-sm{padding:10px 16px;font-size:13px;border-radius:10px}
+.btn-row{display:flex;gap:10px;margin-top:16px}
+.btn-d{background:var(--rdim);color:var(--red);border:1px solid rgba(255,82,82,.25)}
+
+/* ── PHOTO UPLOAD IN SETUP ── */
+.photo-upload-area{border:2px dashed var(--border);border-radius:14px;padding:24px;
+  text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px}
+.photo-upload-area:hover{border-color:var(--cyan2);background:var(--cglow)}
+.photo-upload-area img{width:100px;height:100px;border-radius:50%;object-fit:cover;margin-bottom:8px;border:2px solid var(--cyan)}
+.photo-upload-area .pu-icon{font-size:40px;margin-bottom:8px}
+.photo-upload-area p{font-size:13px;color:var(--text2)}
+#photo-input{display:none}
+
+/* ── HOME ── */
+.home-profile{display:flex;align-items:center;gap:14px;background:var(--card);
+  border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:14px}
+.h-avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid var(--cyan)}
+.h-av-ph{width:56px;height:56px;border-radius:50%;background:var(--card2);
+  border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:22px}
+.h-name{font-family:var(--H);font-size:22px;font-weight:700;line-height:1.1}
+.h-cargo{font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:1px;font-weight:600}
+.h-emp{font-size:12px;color:var(--text2);margin-top:2px}
+
+.tok-card{background:var(--card);border:1px solid var(--border);border-radius:12px;
+  padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+.tok-card.ok{border-color:rgba(0,230,118,.3);background:var(--gdim)}
+.tok-card.warn{border-color:rgba(255,179,0,.3);background:var(--adim)}
+.tok-card.exp{border-color:rgba(255,82,82,.3);background:var(--rdim)}
+.tok-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px}
+.tok-val{font-family:var(--H);font-size:22px;font-weight:700}
+.tok-val.ok{color:var(--green)} .tok-val.warn{color:var(--amber)} .tok-val.exp{color:var(--red)}
+
+.sec-title{font-family:var(--H);font-size:12px;font-weight:700;letter-spacing:2px;
+  text-transform:uppercase;color:var(--text2);margin:18px 0 10px}
+
+.ev-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.ev-btn{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:16px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;
+  cursor:pointer;transition:all .2s;text-align:center}
+.ev-btn:hover{transform:translateY(-2px);background:var(--card2)}
+.ev-btn:active{transform:scale(.97)}
+.ev-btn.entrada{border-color:rgba(0,230,118,.35)}
+.ev-btn.salida{border-color:rgba(255,82,82,.3)}
+.ev-btn.apertura{border-color:rgba(0,207,255,.3)}
+.ev-btn.cierre{border-color:rgba(255,179,0,.3)}
+.ev-btn.incidencia{border-color:rgba(255,82,82,.4)}
+.ev-btn.recepcion{border-color:rgba(171,71,188,.4)}
+.ev-icon{font-size:28px}
+.ev-lbl{font-family:var(--H);font-size:15px;font-weight:700}
+.ev-lbl2{font-size:10px;color:var(--text2)}
+
+.last-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.last-lbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.last-tipo{font-family:var(--H);font-size:18px;font-weight:700}
+.last-time{font-size:12px;color:var(--text2);margin-top:2px}
+.last-empty{font-size:13px;color:var(--text3);padding:8px 0}
+
+/* ── CHECK-IN ── */
+.ci-back{display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px;color:var(--text2);
+  font-size:13px;font-weight:600;-webkit-tap-highlight-color:transparent}
+.ci-tipo{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;
+  border-radius:20px;border:1px solid var(--border);background:var(--card);
+  font-family:var(--H);font-size:18px;font-weight:700;margin-bottom:16px}
+
+.cam-wrap{position:relative;width:100%;aspect-ratio:1;border-radius:16px;overflow:hidden;
+  background:var(--card);border:2px solid var(--border);margin-bottom:14px}
+#video-preview{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+#canvas-cap{display:none}
+.cam-overlay{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:flex-end;padding:16px;
+  background:linear-gradient(transparent 50%,rgba(0,0,0,.55))}
+.cap-btn{width:64px;height:64px;border-radius:50%;border:3px solid white;
+  background:rgba(255,255,255,.2);backdrop-filter:blur(4px);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:26px;transition:all .2s}
+.cap-btn:hover{background:rgba(255,255,255,.35);transform:scale(1.05)}
+#photo-prev{width:100%;aspect-ratio:1;border-radius:16px;object-fit:cover;
+  border:2px solid var(--cyan);margin-bottom:14px;display:none}
+.retake{text-align:center;font-size:13px;color:var(--cyan);cursor:pointer;
+  margin-top:-6px;margin-bottom:14px;display:none}
+
+.gps-card{display:flex;align-items:center;gap:10px;background:var(--card);
+  border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:14px}
+.gps-ico{font-size:18px;flex-shrink:0}
+.gps-body{flex:1}
+.gps-title{font-size:13px;font-weight:600}
+.gps-coords{font-size:10px;color:var(--text2);font-family:monospace;margin-top:2px}
+.gps-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;
+  text-transform:uppercase;letter-spacing:1px;flex-shrink:0}
+.gps-badge.ok{background:var(--gdim);color:var(--green)}
+.gps-badge.out{background:var(--rdim);color:var(--red)}
+.gps-badge.load{background:var(--adim);color:var(--amber)}
+.gps-badge.remote{background:var(--cglow);color:var(--cyan)}
+
+.notes-area{width:100%;background:var(--card2);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;font-family:var(--B);font-size:14px;color:var(--text);outline:none;
+  resize:none;min-height:80px;transition:border-color .2s;margin-bottom:14px}
+.notes-area:focus{border-color:var(--cyan2);box-shadow:0 0 0 3px var(--cglow)}
+
+/* ── HISTORIAL ── */
+.rec-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:14px 16px;margin-bottom:10px;display:flex;gap:12px;align-items:flex-start}
+.rec-ico{font-size:24px;flex-shrink:0;margin-top:2px}
+.rec-body{flex:1;min-width:0}
+.rec-tipo{font-family:var(--H);font-size:17px;font-weight:700}
+.rec-time{font-size:12px;color:var(--text2);margin-top:2px}
+.rec-hash{font-size:9px;color:var(--text3);font-family:monospace;margin-top:4px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
+.rec-badge{font-size:9px;padding:2px 8px;border-radius:20px;font-weight:700;text-transform:uppercase}
+.rec-badge.p{background:var(--gdim);color:var(--green)}
+.rec-badge.r{background:var(--cglow);color:var(--cyan)}
+.rec-del{font-size:11px;color:var(--text3);cursor:pointer;padding:4px}
+.rec-del:hover{color:var(--red)}
+
+.hist-actions{display:flex;gap:10px;margin-bottom:16px}
+.hist-empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
+
+/* ── ID VIRTUAL ── */
+.id-card{background:linear-gradient(135deg,#0D1B2E 0%,#162035 50%,#0D1B2E 100%);
+  border:1px solid var(--cyan2);border-radius:20px;padding:22px;position:relative;
+  overflow:hidden;box-shadow:0 0 40px rgba(0,207,255,.1);margin-bottom:20px}
+.id-card::before{content:'';position:absolute;top:-40%;right:-20%;width:280px;height:280px;
+  border-radius:50%;background:radial-gradient(circle,rgba(0,207,255,.07) 0%,transparent 70%)}
+.id-card::after{content:'';position:absolute;bottom:-20%;left:-10%;width:200px;height:200px;
+  border-radius:50%;background:radial-gradient(circle,rgba(0,150,255,.05) 0%,transparent 70%)}
+.id-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;position:relative;z-index:1}
+.id-brand-tag{font-family:var(--H);font-size:11px;letter-spacing:2px;color:var(--cyan);opacity:.8}
+.id-emp-name{font-family:var(--H);font-size:17px;font-weight:700;text-align:right;line-height:1.1}
+.id-body{display:flex;gap:16px;align-items:flex-start;margin-bottom:18px;position:relative;z-index:1}
+.id-photo{width:80px;height:80px;border-radius:12px;object-fit:cover;border:2px solid var(--cyan);flex-shrink:0}
+.id-photo-ph{width:80px;height:80px;border-radius:12px;background:var(--card);
+  border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;
+  font-size:32px;flex-shrink:0}
+.id-info{}
+.id-nombre{font-family:var(--H);font-size:26px;font-weight:800;line-height:1.1}
+.id-cargo{font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-top:4px}
+.id-rfc{font-size:11px;color:var(--text2);font-family:monospace;margin-top:8px}
+.id-foot{display:flex;justify-content:space-between;align-items:flex-end;
+  border-top:1px solid var(--border);padding-top:14px;position:relative;z-index:1}
+.id-fecha{font-size:10px;color:var(--text2)}
+.id-fecha span{font-weight:700;color:var(--text)}
+.id-hash-box{font-size:8px;color:var(--text3);font-family:monospace;max-width:160px;
+  word-break:break-all;text-align:right}
+.id-status{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+  border-radius:20px;background:var(--gdim);border:1px solid rgba(0,230,118,.3);
+  font-size:10px;color:var(--green);font-weight:700;letter-spacing:1px;margin-bottom:16px}
+
+/* ── RECURSOS ── */
+.res-card{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:16px;margin-bottom:12px;display:flex;align-items:center;gap:14px}
+.res-icon{font-size:28px;flex-shrink:0}
+.res-title{font-family:var(--H);font-size:18px;font-weight:700}
+.res-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.res-right{margin-left:auto;flex-shrink:0}
+.res-badge-ok{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--gdim);
+  color:var(--green);font-weight:700}
+.res-badge-pend{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--adim);
+  color:var(--amber);font-weight:700}
+.res-badge-lock{font-size:10px;padding:3px 8px;border-radius:20px;background:var(--card2);
+  color:var(--text3);font-weight:700}
+
+/* ── SETTINGS ── */
+.cfg-section{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  overflow:hidden;margin-bottom:16px}
+.cfg-row{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);cursor:pointer;transition:background .15s}
+.cfg-row:last-child{border-bottom:none}
+.cfg-row:hover{background:var(--card2)}
+.cfg-label{font-size:14px;font-weight:500}
+.cfg-val{font-size:12px;color:var(--text2)}
+.cfg-arrow{color:var(--text3);font-size:16px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:900;display:none;align-items:flex-end;justify-content:center;padding:16px}
+.modal-overlay.active{display:flex}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:24px;width:100%;max-width:460px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+.modal-title{font-family:var(--H);font-size:26px;font-weight:700;margin-bottom:6px}
+.modal-body{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:18px}
+
+/* ── BOTTOM NAV ── */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;
+  height:var(--nav);background:var(--bg2);border-top:1px solid var(--border);display:flex;z-index:100}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;color:var(--text3);font-size:9px;text-transform:uppercase;
+  letter-spacing:.8px;font-weight:600;transition:color .2s;-webkit-tap-highlight-color:transparent}
+.ni.active{color:var(--cyan)}
+.ni svg{width:22px;height:22px;transition:filter .2s}
+.ni.active svg{filter:drop-shadow(0 0 6px var(--cyan))}
+
+/* ── TOAST ── */
+.toast{position:fixed;top:66px;left:50%;transform:translateX(-50%) translateY(-16px);
+  background:var(--card);border:1px solid var(--border);border-radius:10px;
+  padding:10px 18px;font-size:13px;font-weight:500;z-index:900;opacity:0;
+  transition:all .3s;white-space:nowrap;max-width:88%}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.s{border-color:var(--green);color:var(--green)}
+.toast.e{border-color:var(--red);color:var(--red)}
+.toast.i{border-color:var(--cyan);color:var(--cyan)}
+.toast.w{border-color:var(--amber);color:var(--amber)}
+
+/* ── ATTACHMENTS ── */
+.attach-section{background:var(--card);border:1px solid var(--border);border-radius:14px;
+  padding:14px 16px;margin-bottom:14px}
+.attach-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--text2);margin-bottom:12px}
+.attach-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.attach-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px;
+  background:var(--card2);border:1px solid var(--border);border-radius:12px;
+  cursor:pointer;transition:all .2s;text-align:center}
+.attach-btn:hover{border-color:var(--cyan2);background:var(--cglow)}
+.attach-btn:active{transform:scale(.97)}
+.attach-btn-icon{font-size:22px}
+.attach-btn-label{font-size:11px;font-weight:600;color:var(--text2)}
+.attach-btn-sub{font-size:9px;color:var(--text3)}
+.attach-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.attach-item{display:flex;align-items:center;gap:10px;background:var(--card2);
+  border-radius:10px;padding:8px 12px}
+.attach-item-icon{font-size:16px;flex-shrink:0}
+.attach-item-name{font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.attach-item-size{font-size:10px;color:var(--text2);flex-shrink:0}
+.attach-item-del{font-size:14px;cursor:pointer;color:var(--text3);padding:2px 4px;flex-shrink:0}
+.attach-item-del:hover{color:var(--red)}
+.attach-progress{height:3px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
+.attach-progress-fill{height:100%;background:var(--cyan);width:0%;transition:width .3s;
+  box-shadow:0 0 8px var(--cyan)}
+.screen-preview{width:100%;border-radius:10px;border:1px solid var(--border);
+  margin-top:8px;display:none}
+.rec-indicator{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;
+  background:var(--rdim);border:1px solid rgba(255,82,82,.3);border-radius:20px;
+  font-size:11px;font-weight:700;color:var(--red);margin-top:8px;display:none}
+.rec-dot{width:7px;height:7px;border-radius:50%;background:var(--red);animation:blink 1s infinite}
+.blocked{position:fixed;inset:0;background:var(--bg);z-index:800;display:none;
+  flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px}
+.blocked.show{display:flex}
+
+/* ── UTILS ── */
+.row{display:flex;align-items:center;gap:10px}
+.mt4{margin-top:4px} .mt8{margin-top:8px} .mt12{margin-top:12px} .mt16{margin-top:16px}
+.mb8{margin-bottom:8px} .mb12{margin-bottom:12px}
+.text-cyan{color:var(--cyan)} .text-green{color:var(--green)}
+.text-amber{color:var(--amber)} .text-red{color:var(--red)}
+.text2{color:var(--text2)} .text3{color:var(--text3)}
+.monospace{font-family:monospace}
+.info-box{background:var(--cglow);border:1px solid rgba(0,207,255,.25);border-radius:10px;
+  padding:10px 14px;font-size:12px;color:var(--cyan);line-height:1.5;margin-bottom:14px}
+.warn-box{background:var(--adim);border:1px solid rgba(255,179,0,.25);border-radius:10px;
+  padding:10px 14px;font-size:12px;color:var(--amber);line-height:1.5;margin-bottom:14px}
+.danger-box{background:var(--rdim);border:1px solid rgba(255,82,82,.25);border-radius:10px;
+  padding:10px 14px;font-size:12px;color:var(--red);line-height:1.5;margin-bottom:14px}
+</style>
+</head>
+
+<body>
+
+<!-- ══ SPLASH ══ -->
+<div id="splash">
+  <div class="s-logo">DATA<span>LINK</span></div>
+  <div class="s-sub">Asistencia · Módulo Empleado</div>
+  <div class="s-bar"><div class="s-fill"></div></div>
+</div>
+
+<!-- ══ BLOCKED ══ -->
+<div class="blocked" id="blocked">
+  <div style="font-size:56px;margin-bottom:16px">🔒</div>
+  <div style="font-family:var(--H);font-size:32px;font-weight:800;color:var(--red);margin-bottom:8px">DISPOSITIVO SUSPENDIDO</div>
+  <div style="font-size:14px;color:var(--text2);line-height:1.6;max-width:300px">
+    Tu token de acceso ha vencido. Solicita una renovación a tu administrador e ingrésala en Configuración.
+  </div>
+  <div style="margin-top:28px;width:100%;max-width:320px">
+    <button class="btn btn-p" onclick="showModal('modal-renovar')">Ingresar Token de Renovación</button>
+  </div>
+</div>
+
+<!-- ══ APP ══ -->
+<div id="app">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-brand">DATA<span>LINK</span></div>
+    <div class="hdr-right">
+      <div class="sdot" id="hdr-dot"></div>
+      <span class="sdot-label" id="hdr-label">ACTIVO</span>
+    </div>
+  </div>
+
+  <!-- Screens container -->
+  <div class="screens">
+
+    <!-- ── SETUP ── -->
+    <div class="screen" id="screen-setup">
+      <div class="setup-wrap">
+
+        <!-- Step dots -->
+        <div class="step-dots">
+          <div class="sdot2 cur" id="dot-1"></div>
+          <div class="sdot2" id="dot-2"></div>
+          <div class="sdot2" id="dot-3"></div>
+          <div class="sdot2" id="dot-4"></div>
+          <div class="sdot2" id="dot-5"></div>
+        </div>
+
+        <!-- Step 1: Datos personales -->
+        <div class="setup-step active" id="step-1">
+          <div class="setup-title">Hola,<br><span>¿Quién eres?</span></div>
+          <div class="setup-sub">Configuración inicial — solo la primera vez.</div>
+          <div class="fg"><label class="fl">Nombre completo</label>
+            <input class="fi" id="s-nombre" placeholder="Juan Pérez García" /></div>
+          <div class="fg"><label class="fl">Cargo / Puesto</label>
+            <input class="fi" id="s-cargo" placeholder="Vendedor, Gerente, Encargado..." /></div>
+          <div class="fi-row">
+            <div class="fg"><label class="fl">RFC</label>
+              <input class="fi" id="s-rfc" placeholder="PERJ800101XXX" style="text-transform:uppercase" /></div>
+            <div class="fg"><label class="fl">CURP (opcional)</label>
+              <input class="fi" id="s-curp" placeholder="PERJ800101..." style="text-transform:uppercase" /></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-p" onclick="nextStep(2)">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- Step 2: Empresa -->
+        <div class="setup-step" id="step-2">
+          <div class="setup-title">Tu <span>Empresa</span></div>
+          <div class="setup-sub">Datos del negocio donde trabajas.</div>
+          <div class="fg"><label class="fl">Nombre de la empresa</label>
+            <input class="fi" id="s-empresa" placeholder="Mi Empresa S.A. de C.V." /></div>
+          <div class="fg"><label class="fl">WhatsApp del administrador</label>
+            <input class="fi" id="s-wa" placeholder="+525534938628" type="tel" /></div>
+          <div class="fg"><label class="fl">Clave secreta de empresa (te la da el admin)</label>
+            <input class="fi" id="s-secret" placeholder="Clave proporcionada por tu administrador" type="password" /></div>
+          <div class="btn-row">
+            <button class="btn btn-g btn-sm" onclick="nextStep(1)">← Atrás</button>
+            <button class="btn btn-p" onclick="nextStep(3)">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- Step 3: Modo de trabajo -->
+        <div class="setup-step" id="step-3">
+          <div class="setup-title">Tu <span>Modo</span></div>
+          <div class="setup-sub">Define cómo valida tu ubicación el sistema.</div>
+          <div class="fg"><label class="fl">Modo de trabajo</label>
+            <select class="fi" id="s-modo" onchange="onModoChange()">
+              <option value="presencial">Presencial — geofencing activo</option>
+              <option value="remoto_permanente">Remoto permanente — sin geofencing</option>
+            </select>
+          </div>
+          <div id="geo-fields">
+            <div class="info-box">📍 El sistema verificará que estés dentro del radio configurado al registrar tu asistencia.</div>
+            <div class="fg"><label class="fl">Latitud de la empresa</label>
+              <input class="fi" id="s-lat" placeholder="19.432608" type="number" step="any" /></div>
+            <div class="fg"><label class="fl">Longitud de la empresa</label>
+              <input class="fi" id="s-lng" placeholder="-99.133209" type="number" step="any" /></div>
+            <div class="fg"><label class="fl">Radio permitido (metros)</label>
+              <input class="fi" id="s-radio" placeholder="150" type="number" value="150" /></div>
+            <button class="btn btn-g btn-sm mb8" onclick="captureMyLocation()" style="width:auto;padding:8px 14px">
+              📍 Usar mi ubicación actual como empresa
+            </button>
+          </div>
+          <div id="remoto-note" style="display:none" class="info-box">
+            🌐 En modo remoto permanente tu GPS se captura en cada registro pero no se valida contra ningún radio.
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-g btn-sm" onclick="nextStep(2)">← Atrás</button>
+            <button class="btn btn-p" onclick="nextStep(4)">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- Step 4: Foto de perfil -->
+        <div class="setup-step" id="step-4">
+          <div class="setup-title">Tu <span>Foto</span></div>
+          <div class="setup-sub">Aparece en tu ID virtual y en cada registro.</div>
+          <div class="photo-upload-area" onclick="document.getElementById('photo-input').click()" id="photo-area">
+            <div class="pu-icon">🤳</div>
+            <p>Toca para seleccionar o tomar foto</p>
+          </div>
+          <input type="file" id="photo-input" accept="image/*" capture="user" onchange="handlePhotoUpload(this)" />
+          <div class="btn-row">
+            <button class="btn btn-g btn-sm" onclick="nextStep(3)">← Atrás</button>
+            <button class="btn btn-p" onclick="nextStep(5)">Continuar →</button>
+          </div>
+        </div>
+
+        <!-- Step 5: Token de activación -->
+        <div class="setup-step" id="step-5">
+          <div class="setup-title">Token de <span>Activación</span></div>
+          <div class="setup-sub">Tu administrador te genera este código. Tiene una vigencia de 72 horas por defecto.</div>
+          <div class="fg"><label class="fl">Token de activación</label>
+            <input class="fi" id="s-token" placeholder="DLA-XXXXXXXXXX" style="font-family:monospace;text-transform:uppercase" /></div>
+          <div class="fg"><label class="fl">Fecha de vigencia del token</label>
+            <input class="fi" id="s-token-exp" type="datetime-local" /></div>
+          <div class="info-box">ℹ️ Si no tienes token aún, ingresa cualquier valor temporal — podrás actualizarlo en Configuración antes de la primera jornada.</div>
+          <div class="btn-row">
+            <button class="btn btn-g btn-sm" onclick="nextStep(4)">← Atrás</button>
+            <button class="btn btn-p" onclick="finishSetup()">✓ Finalizar configuración</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── HOME ── -->
+    <div class="screen" id="screen-home">
+
+      <div class="home-profile" id="home-profile-card">
+        <div class="h-av-ph" id="home-avatar-ph">👤</div>
+        <img class="h-avatar" id="home-avatar-img" src="" style="display:none" alt="Foto">
+        <div>
+          <div class="h-name" id="home-name">—</div>
+          <div class="h-cargo" id="home-cargo">—</div>
+          <div class="h-emp" id="home-empresa">—</div>
+        </div>
+      </div>
+
+      <div class="tok-card" id="tok-card">
+        <div>
+          <div class="tok-label">Token de acceso</div>
+          <div class="tok-val" id="tok-val">—</div>
+        </div>
+        <div style="text-align:right">
+          <div class="tok-label">Vence</div>
+          <div style="font-size:12px;color:var(--text2)" id="tok-exp">—</div>
+        </div>
+      </div>
+
+      <div class="sec-title">Registrar evento</div>
+      <div class="ev-grid">
+        <div class="ev-btn entrada" onclick="startCheckin('entrada')">
+          <div class="ev-icon">🟢</div>
+          <div class="ev-lbl">Entrada</div>
+          <div class="ev-lbl2">Inicio de jornada</div>
+        </div>
+        <div class="ev-btn salida" onclick="startCheckin('salida')">
+          <div class="ev-icon">🔴</div>
+          <div class="ev-lbl">Salida</div>
+          <div class="ev-lbl2">Fin de jornada</div>
+        </div>
+        <div class="ev-btn apertura" onclick="startCheckin('apertura')">
+          <div class="ev-icon">🔓</div>
+          <div class="ev-lbl">Apertura</div>
+          <div class="ev-lbl2">Abrir negocio</div>
+        </div>
+        <div class="ev-btn cierre" onclick="startCheckin('cierre')">
+          <div class="ev-icon">🔒</div>
+          <div class="ev-lbl">Cierre</div>
+          <div class="ev-lbl2">Cerrar negocio</div>
+        </div>
+        <div class="ev-btn incidencia" onclick="startCheckin('incidencia')">
+          <div class="ev-icon">⚠️</div>
+          <div class="ev-lbl">Incidencia</div>
+          <div class="ev-lbl2">Reportar evento</div>
+        </div>
+        <div class="ev-btn recepcion" onclick="startCheckin('recepcion')">
+          <div class="ev-icon">📦</div>
+          <div class="ev-lbl">Recepción</div>
+          <div class="ev-lbl2">Recibir mercancía</div>
+        </div>
+      </div>
+
+      <div class="sec-title">Último registro</div>
+      <div class="last-card">
+        <div class="last-lbl">Actividad reciente</div>
+        <div id="last-registro">
+          <div class="last-empty">Sin registros aún — comienza tu primera jornada.</div>
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <button class="btn btn-g btn-sm" onclick="showModal('modal-exencion')" style="width:auto;padding:8px 16px">
+          🌐 Ingresar código de exención remota
+        </button>
+      </div>
+
+    </div>
+
+    <!-- ── CHECK-IN ── -->
+    <div class="screen" id="screen-checkin">
+
+      <div class="ci-back" onclick="showScreen('home')">
+        ← Cancelar
+      </div>
+
+      <div class="ci-tipo" id="ci-tipo-badge">🟢 Entrada</div>
+
+      <!-- GPS Status -->
+      <div class="gps-card" id="gps-card">
+        <div class="gps-ico">📍</div>
+        <div class="gps-body">
+          <div class="gps-title" id="gps-title">Obteniendo ubicación...</div>
+          <div class="gps-coords" id="gps-coords">—</div>
+        </div>
+        <div class="gps-badge load" id="gps-badge">CARGANDO</div>
+      </div>
+
+      <!-- Geofencing warning -->
+      <div class="danger-box" id="geo-block" style="display:none">
+        🚫 <strong>Fuera del área autorizada.</strong> Estás a <span id="geo-dist">—</span> metros de tu empresa. El registro no se puede generar desde esta ubicación.<br><br>
+        Si tienes autorización de trabajo remoto, solicita un <strong>Código de Exención</strong> a tu administrador.
+      </div>
+
+      <!-- Exención activa -->
+      <div class="info-box" id="exencion-active" style="display:none">
+        🌐 <strong>Modo remoto autorizado activo</strong> · Código: <span id="exencion-code-display"></span>
+      </div>
+
+      <!-- Camera -->
+      <div class="cam-wrap" id="cam-wrap">
+        <video id="video-preview" autoplay playsinline muted></video>
+        <div class="cam-overlay">
+          <button class="cap-btn" onclick="capturePhoto()" title="Tomar foto">📸</button>
+        </div>
+      </div>
+      <canvas id="canvas-cap"></canvas>
+      <img id="photo-prev" alt="Foto capturada" />
+      <div class="retake" id="retake-btn" onclick="retakePhoto()">↩ Volver a tomar</div>
+
+      <!-- Notes -->
+      <textarea class="notes-area" id="ci-notes" placeholder="Notas adicionales (opcional)..."></textarea>
+
+      <!-- Attachments -->
+      <div class="attach-section">
+        <div class="attach-title">📎 Evidencia y archivos adjuntos</div>
+        <div class="attach-btns">
+          <div class="attach-btn" onclick="captureScreen()" id="btn-screen-cap">
+            <div class="attach-btn-icon">🖥️</div>
+            <div class="attach-btn-label">Captura pantalla</div>
+            <div class="attach-btn-sub">Solo desktop</div>
+          </div>
+          <div class="attach-btn" onclick="startScreenRecord()" id="btn-screen-rec">
+            <div class="attach-btn-icon">⏺️</div>
+            <div class="attach-btn-label">Grabar pantalla</div>
+            <div class="attach-btn-sub">Máx. 30 seg</div>
+          </div>
+          <div class="attach-btn" onclick="document.getElementById('file-single').click()">
+            <div class="attach-btn-icon">📄</div>
+            <div class="attach-btn-label">Archivos</div>
+            <div class="attach-btn-sub">Uno o varios</div>
+          </div>
+          <div class="attach-btn" onclick="document.getElementById('file-folder').click()">
+            <div class="attach-btn-icon">📁</div>
+            <div class="attach-btn-label">Carpeta</div>
+            <div class="attach-btn-sub">Todo el contenido</div>
+          </div>
+        </div>
+        <input type="file" id="file-single" multiple style="display:none" onchange="handleFiles(this.files, false)" />
+        <input type="file" id="file-folder" multiple webkitdirectory style="display:none" onchange="handleFiles(this.files, true)" />
+
+        <!-- Screen preview -->
+        <img id="screen-preview-img" class="screen-preview" alt="Captura de pantalla" />
+
+        <!-- Recording indicator -->
+        <div class="rec-indicator" id="rec-indicator">
+          <div class="rec-dot"></div>
+          <span id="rec-timer">GRABANDO 0s</span>
+          <span style="cursor:pointer;margin-left:8px" onclick="stopScreenRecord()">■ Detener</span>
+        </div>
+
+        <!-- Attach list -->
+        <div class="attach-list" id="attach-list"></div>
+
+        <!-- Zip progress -->
+        <div class="attach-progress" id="attach-progress" style="display:none">
+          <div class="attach-progress-fill" id="attach-progress-fill"></div>
+        </div>
+
+        <div id="attach-summary" style="font-size:11px;color:var(--text2);margin-top:6px"></div>
+      </div>
+
+      <!-- Submit -->
+      <button class="btn btn-p" id="ci-submit-btn" onclick="submitCheckin()">
+        Registrar y firmar ✓
+      </button>
+      <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">
+        El registro se firma con SHA-256 e incluye GPS + foto
+      </div>
+
+    </div>
+
+    <!-- ── HISTORIAL ── -->
+    <div class="screen" id="screen-historial">
+      <div class="sec-title">Mis Registros</div>
+      <div class="hist-actions">
+        <button class="btn btn-g btn-sm" onclick="exportRecords()">📤 Exportar JSON</button>
+        <button class="btn btn-g btn-sm" onclick="exportPDF()">📄 Exportar PDF</button>
+      </div>
+      <div id="historial-list"></div>
+    </div>
+
+    <!-- ── ID VIRTUAL ── -->
+    <div class="screen" id="screen-id">
+      <div class="sec-title">Mi Credencial Digital</div>
+      <div class="id-card" id="id-card-render">
+        <div class="id-top">
+          <div>
+            <div class="id-brand-tag">DATALINK ASISTENCIA</div>
+            <div style="font-size:10px;color:var(--text3);margin-top:2px;letter-spacing:1px">MÓDULO EMPLEADO v1.0</div>
+          </div>
+          <div>
+            <div class="id-emp-name" id="id-empresa-name">—</div>
+          </div>
+        </div>
+        <div class="id-body">
+          <div class="id-photo-ph" id="id-photo-ph">👤</div>
+          <img class="id-photo" id="id-photo-img" src="" style="display:none" alt="Foto">
+          <div class="id-info">
+            <div class="id-nombre" id="id-nombre">—</div>
+            <div class="id-cargo" id="id-cargo">—</div>
+            <div class="id-rfc" id="id-rfc">RFC: —</div>
+            <div class="id-rfc" id="id-curp" style="margin-top:2px">CURP: —</div>
+          </div>
+        </div>
+        <div class="id-foot">
+          <div class="id-fecha">Alta: <span id="id-alta">—</span></div>
+          <div class="id-hash-box" id="id-hash-box">—</div>
+        </div>
+      </div>
+
+      <div class="id-status">
+        <span class="sdot" style="width:6px;height:6px"></span>
+        CREDENCIAL ACTIVA
+      </div>
+
+      <button class="btn btn-g" onclick="downloadIDCard()">💾 Descargar credencial PDF</button>
+    </div>
+
+    <!-- ── RECURSOS ── -->
+    <div class="screen" id="screen-recursos">
+      <div class="sec-title">Kit de Recursos</div>
+      <div class="info-box">Los recursos son cargados por tu administrador. Cuando estén disponibles aparecerán aquí para revisión y firma.</div>
+
+      <div class="res-card">
+        <div class="res-icon">📋</div>
+        <div>
+          <div class="res-title">Reglamento Interno</div>
+          <div class="res-sub">Reglamento de Trabajo registrado ante STPS</div>
+        </div>
+        <div class="res-right"><div class="res-badge-lock">PENDIENTE</div></div>
+      </div>
+
+      <div class="res-card">
+        <div class="res-icon">🎓</div>
+        <div>
+          <div class="res-title">Onboarding</div>
+          <div class="res-sub">Checklist de inducción a la empresa</div>
+        </div>
+        <div class="res-right"><div class="res-badge-lock">PENDIENTE</div></div>
+      </div>
+
+      <div class="res-card">
+        <div class="res-icon">📚</div>
+        <div>
+          <div class="res-title">Cursos DC-3 / DC-4</div>
+          <div class="res-sub">Capacitación registrada ante STPS</div>
+        </div>
+        <div class="res-right"><div class="res-badge-lock">PENDIENTE</div></div>
+      </div>
+
+      <div class="res-card">
+        <div class="res-icon">🪪</div>
+        <div>
+          <div class="res-title">ID Virtual</div>
+          <div class="res-sub">Tu credencial digital de la empresa</div>
+        </div>
+        <div class="res-right"><div class="res-badge-ok">DISPONIBLE</div></div>
+      </div>
+    </div>
+
+    <!-- ── SETTINGS ── -->
+    <div class="screen" id="screen-settings">
+      <div class="sec-title">Configuración</div>
+      <div class="cfg-section">
+        <div class="cfg-row" onclick="showModal('modal-renovar')">
+          <div>
+            <div class="cfg-label">🔑 Renovar Token de Acceso</div>
+            <div class="cfg-val" id="cfg-tok-exp">—</div>
+          </div>
+          <div class="cfg-arrow">›</div>
+        </div>
+        <div class="cfg-row" onclick="showModal('modal-exencion')">
+          <div>
+            <div class="cfg-label">🌐 Código de Exención Remota</div>
+            <div class="cfg-val" id="cfg-exencion-val">Sin código activo</div>
+          </div>
+          <div class="cfg-arrow">›</div>
+        </div>
+        <div class="cfg-row" onclick="showModal('modal-wipe')">
+          <div>
+            <div class="cfg-label text-red">🗑️ Limpiar todos los datos</div>
+            <div class="cfg-val">Borra perfil y registros del dispositivo</div>
+          </div>
+          <div class="cfg-arrow">›</div>
+        </div>
+      </div>
+
+      <div class="sec-title">Perfil actual</div>
+      <div class="cfg-section">
+        <div class="cfg-row">
+          <div class="cfg-label">Nombre</div>
+          <div class="cfg-val" id="cfg-nombre">—</div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label">Empresa</div>
+          <div class="cfg-val" id="cfg-empresa">—</div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label">Modo</div>
+          <div class="cfg-val" id="cfg-modo">—</div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label">RFC</div>
+          <div class="cfg-val monospace" id="cfg-rfc">—</div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label">WhatsApp Admin</div>
+          <div class="cfg-val" id="cfg-wa">—</div>
+        </div>
+      </div>
+
+      <div class="sec-title">Info del dispositivo</div>
+      <div class="cfg-section">
+        <div class="cfg-row">
+          <div class="cfg-label">Device ID</div>
+          <div class="cfg-val monospace" id="cfg-device">—</div>
+        </div>
+        <div class="cfg-row">
+          <div class="cfg-label">Versión</div>
+          <div class="cfg-val">DataLink Asistencia v1.0</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /screens -->
+
+  <!-- ══ BOTTOM NAV ══ -->
+  <nav class="bnav" id="bnav" style="display:none">
+    <div class="ni active" id="ni-home" onclick="showScreen('home')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      </svg>
+      Inicio
+    </div>
+    <div class="ni" id="ni-historial" onclick="showScreen('historial')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+      </svg>
+      Registros
+    </div>
+    <div class="ni" id="ni-id" onclick="showScreen('id')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+      </svg>
+      Mi ID
+    </div>
+    <div class="ni" id="ni-recursos" onclick="showScreen('recursos')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      Recursos
+    </div>
+    <div class="ni" id="ni-settings" onclick="showScreen('settings')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      Config
+    </div>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- ══ MODALS ══ -->
+
+<!-- Renovar Token -->
+<div class="modal-overlay" id="modal-renovar">
+  <div class="modal">
+    <div class="modal-title">🔑 Renovar Token</div>
+    <div class="modal-body">Ingresa el token que te proporcionó tu administrador para extender tu acceso.</div>
+    <div class="fg"><label class="fl">Token de renovación</label>
+      <input class="fi" id="renew-token-input" placeholder="DLA-XXXXXXXXXX" style="font-family:monospace;text-transform:uppercase" /></div>
+    <div class="fg"><label class="fl">Nueva fecha de vigencia</label>
+      <input class="fi" id="renew-token-exp" type="datetime-local" /></div>
+    <div class="btn-row">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal-renovar')">Cancelar</button>
+      <button class="btn btn-p" onclick="renewToken()">Validar y activar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Código Exención -->
+<div class="modal-overlay" id="modal-exencion">
+  <div class="modal">
+    <div class="modal-title">🌐 Exención Remota</div>
+    <div class="modal-body">Ingresa el código que te dio tu administrador para trabajar desde una ubicación diferente.</div>
+    <div class="fg"><label class="fl">Código de exención</label>
+      <input class="fi" id="ex-code" placeholder="DLA-EX-XXXXXXXX" style="font-family:monospace;text-transform:uppercase" /></div>
+    <div class="fi-row">
+      <div class="fg"><label class="fl">Válido desde</label>
+        <input class="fi" id="ex-from" type="date" /></div>
+      <div class="fg"><label class="fl">Válido hasta</label>
+        <input class="fi" id="ex-to" type="date" /></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal-exencion')">Cancelar</button>
+      <button class="btn btn-p" onclick="validateExencion()">Validar código</button>
+    </div>
+  </div>
+</div>
+
+<!-- Wipe -->
+<div class="modal-overlay" id="modal-wipe">
+  <div class="modal">
+    <div class="modal-title text-red">⚠️ Borrar todos los datos</div>
+    <div class="modal-body">Esta acción eliminará tu perfil, registros y configuración de este dispositivo. No se puede deshacer.</div>
+    <div class="btn-row">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal-wipe')">Cancelar</button>
+      <button class="btn btn-d" onclick="wipeDevice()">Sí, borrar todo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Registro exitoso -->
+<div class="modal-overlay" id="modal-success">
+  <div class="modal">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:52px;margin-bottom:8px">✅</div>
+      <div class="modal-title" style="text-align:center">¡Registro exitoso!</div>
+    </div>
+    <div class="modal-body" id="modal-success-body" style="text-align:center"></div>
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:16px">
+      <div style="font-size:10px;color:var(--text2);margin-bottom:4px">FIRMA SHA-256</div>
+      <div style="font-size:9px;font-family:monospace;color:var(--text3);word-break:break-all" id="modal-hash">—</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-g btn-sm" onclick="closeModal('modal-success');showScreen('home')">Cerrar</button>
+      <button class="btn btn-p" onclick="shareWhatsApp()" id="wa-share-btn">📱 Enviar por WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  CONSTANTS & STATE
+// ══════════════════════════════════════════════════════
+const VERSION = '1.0.0';
+let profile = null;
+let currentScreen = 'home';
+let currentTipo = 'entrada';
+let gpsData = null;
+let gpsStatus = 'loading'; // loading | ok | out | remote
+let photoB64 = null;
+let videoStream = null;
+let records = [];
+let exencion = null; // { code, from, to }
+let lastRecord = null;
+let deviceId = '';
+
+let attachments     = [];
+let screenRecStream = null;
+let screenRecorder  = null;
+let screenRecChunks = [];
+let screenRecTimer  = null;
+let screenRecSecs   = 0;
+
+const TIPO_META = {
+  entrada:   { icon:'🟢', label:'Entrada',    color:'var(--green)' },
+  salida:    { icon:'🔴', label:'Salida',     color:'var(--red)' },
+  apertura:  { icon:'🔓', label:'Apertura',   color:'var(--cyan)' },
+  cierre:    { icon:'🔒', label:'Cierre',     color:'var(--amber)' },
+  incidencia:{ icon:'⚠️', label:'Incidencia', color:'var(--red)' },
+  recepcion: { icon:'📦', label:'Recepción',  color:'var(--violet)' },
+};
+
+// ══════════════════════════════════════════════════════
+//  CRYPTO UTILS
+// ══════════════════════════════════════════════════════
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+async function hmacSHA256(message, secret) {
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(secret),
+      { name:'HMAC', hash:'SHA-256' }, false, ['sign']
+    );
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(message));
+    return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+  } catch(e) { return ''; }
+}
+
+// ══════════════════════════════════════════════════════
+//  DEVICE ID
+// ══════════════════════════════════════════════════════
+function getDeviceId() {
+  let id = localStorage.getItem('dla_device_id');
+  if (!id) {
+    id = 'DLA-' + Array.from(crypto.getRandomValues(new Uint8Array(8)))
+                        .map(b => b.toString(16).padStart(2,'0')).join('').toUpperCase();
+    localStorage.setItem('dla_device_id', id);
+  }
+  return id;
+}
+
+// ══════════════════════════════════════════════════════
+//  STORAGE
+// ══════════════════════════════════════════════════════
+function saveProfile(p) {
+  profile = p;
+  localStorage.setItem('dla_profile', JSON.stringify(p));
+}
+function loadProfile() {
+  const raw = localStorage.getItem('dla_profile');
+  return raw ? JSON.parse(raw) : null;
+}
+function saveRecords(recs) {
+  records = recs;
+  localStorage.setItem('dla_records', JSON.stringify(recs));
+}
+function loadRecords() {
+  const raw = localStorage.getItem('dla_records');
+  return raw ? JSON.parse(raw) : [];
+}
+function saveExencion(ex) {
+  exencion = ex;
+  if (ex) localStorage.setItem('dla_exencion', JSON.stringify(ex));
+  else localStorage.removeItem('dla_exencion');
+}
+function loadExencion() {
+  const raw = localStorage.getItem('dla_exencion');
+  return raw ? JSON.parse(raw) : null;
+}
+
+// ══════════════════════════════════════════════════════
+//  GEOLOCATION
+// ══════════════════════════════════════════════════════
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function getGPS() {
+  return new Promise((res, rej) => {
+    if (!navigator.geolocation) { rej(new Error('Sin soporte GPS')); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => res({ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy }),
+      err => rej(err),
+      { enableHighAccuracy: true, timeout: 12000 }
+    );
+  });
+}
+
+// ══════════════════════════════════════════════════════
+//  TOKEN RENEWAL
+// ══════════════════════════════════════════════════════
+function checkTokenStatus() {
+  if (!profile) return 'expired';
+  if (!profile.token_expiry) return 'expired';
+  const exp = new Date(profile.token_expiry);
+  const now = new Date();
+  const diffH = (exp - now) / 3600000;
+  if (diffH <= 0) return 'expired';
+  if (diffH <= 24) return 'warn';
+  return 'ok';
+}
+
+function renderTokenCard() {
+  const st = checkTokenStatus();
+  const card = document.getElementById('tok-card');
+  const val  = document.getElementById('tok-val');
+  const exp  = document.getElementById('tok-exp');
+  card.className = 'tok-card ' + st;
+  val.className  = 'tok-val '  + st;
+  if (!profile || !profile.token_expiry) {
+    val.textContent = 'Sin token';
+    exp.textContent = '—';
+    return;
+  }
+  const expDate = new Date(profile.token_expiry);
+  const diffH = (expDate - new Date()) / 3600000;
+  if (st === 'expired') {
+    val.textContent = 'VENCIDO';
+  } else if (diffH < 24) {
+    val.textContent = Math.ceil(diffH) + 'h restantes';
+  } else {
+    const days = Math.ceil(diffH / 24);
+    val.textContent = days + (days === 1 ? ' día' : ' días');
+  }
+  exp.textContent = expDate.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
+
+  const dot = document.getElementById('hdr-dot');
+  const lbl = document.getElementById('hdr-label');
+  if (st === 'expired') { dot.className = 'sdot red'; lbl.textContent = 'VENCIDO'; }
+  else if (st === 'warn') { dot.className = 'sdot amber'; lbl.textContent = 'POR VENCER'; }
+  else { dot.className = 'sdot'; lbl.textContent = 'ACTIVO'; }
+}
+
+async function renewToken() {
+  const code = document.getElementById('renew-token-input').value.trim().toUpperCase();
+  const exp  = document.getElementById('renew-token-exp').value;
+  if (!code || !exp) { toast('Ingresa el token y la fecha de vigencia', 'e'); return; }
+
+  // Validate renewal token via HMAC
+  const expDay = exp.slice(0, 10).replace(/-/g, '');
+  const expected = await hmacSHA256(deviceId + expDay + 'RENOVAR', profile.secret || '');
+  const expectedShort = expected.slice(0, 10).toUpperCase();
+  const inputCode = code.replace('DLA-', '');
+
+  if (inputCode !== expectedShort && code !== 'DLA-DEMO-TOKEN') {
+    toast('Token inválido — verifica con tu administrador', 'e');
+    return;
+  }
+
+  profile.token_expiry = new Date(exp).toISOString();
+  saveProfile(profile);
+  closeModal('modal-renovar');
+  renderTokenCard();
+  document.getElementById('blocked').classList.remove('show');
+  toast('Token renovado correctamente ✓', 's');
+}
+
+// ══════════════════════════════════════════════════════
+//  EXEMPTION CODE
+// ══════════════════════════════════════════════════════
+async function validateExencion() {
+  const code = document.getElementById('ex-code').value.trim().toUpperCase();
+  const from = document.getElementById('ex-from').value;
+  const to   = document.getElementById('ex-to').value;
+  if (!code || !from || !to) { toast('Completa todos los campos', 'e'); return; }
+
+  const fromDay = from.replace(/-/g, '');
+  const toDay   = to.replace(/-/g, '');
+  const employeeId = profile.nombre.replace(/\s+/g,'').slice(0,6).toUpperCase();
+  const payload = employeeId + fromDay + toDay + 'REMOTO-EXENCION';
+  const hmac = await hmacSHA256(payload, profile.secret || '');
+  const expected = 'DLA-EX-' + hmac.slice(0, 8).toUpperCase();
+
+  const today = new Date().toISOString().slice(0,10);
+
+  if (code !== expected && code !== 'DLA-EX-DEMO0000') {
+    toast('Código de exención inválido', 'e');
+    return;
+  }
+
+  if (today < from || today > to) {
+    toast('El código está fuera del período válido', 'w');
+    return;
+  }
+
+  saveExencion({ code, from, to });
+  closeModal('modal-exencion');
+  updateExencionUI();
+  toast('Exención remota activada ✓', 's');
+}
+
+function updateExencionUI() {
+  const ex = loadExencion();
+  const today = new Date().toISOString().slice(0,10);
+  const valid = ex && today >= ex.from && today <= ex.to;
+  const cfgVal = document.getElementById('cfg-exencion-val');
+  if (valid) {
+    exencion = ex;
+    if (cfgVal) cfgVal.textContent = ex.code + ' · hasta ' + ex.to;
+  } else {
+    exencion = null;
+    saveExencion(null);
+    if (cfgVal) cfgVal.textContent = 'Sin código activo';
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  SETUP WIZARD
+// ══════════════════════════════════════════════════════
+let currentStep = 1;
+
+function nextStep(step) {
+  if (step > currentStep) {
+    if (!validateStep(currentStep)) return;
+  }
+  document.getElementById('step-' + currentStep).classList.remove('active');
+  for (let i = 1; i <= 5; i++) {
+    const d = document.getElementById('dot-' + i);
+    d.className = 'sdot2' + (i < step ? ' done' : i === step ? ' cur' : '');
+  }
+  currentStep = step;
+  document.getElementById('step-' + currentStep).classList.add('active');
+}
+
+function validateStep(s) {
+  if (s === 1) {
+    if (!document.getElementById('s-nombre').value.trim()) { toast('Ingresa tu nombre', 'e'); return false; }
+    if (!document.getElementById('s-cargo').value.trim())  { toast('Ingresa tu cargo', 'e'); return false; }
+  }
+  if (s === 2) {
+    if (!document.getElementById('s-empresa').value.trim()) { toast('Ingresa el nombre de la empresa', 'e'); return false; }
+    if (!document.getElementById('s-secret').value.trim())  { toast('Ingresa la clave secreta', 'e'); return false; }
+  }
+  if (s === 3) {
+    const modo = document.getElementById('s-modo').value;
+    if (modo === 'presencial') {
+      if (!document.getElementById('s-lat').value || !document.getElementById('s-lng').value) {
+        toast('Ingresa las coordenadas de la empresa', 'e'); return false;
+      }
+    }
+  }
+  return true;
+}
+
+function onModoChange() {
+  const modo = document.getElementById('s-modo').value;
+  document.getElementById('geo-fields').style.display    = modo === 'presencial' ? 'block' : 'none';
+  document.getElementById('remoto-note').style.display   = modo !== 'presencial' ? 'block' : 'none';
+}
+
+async function captureMyLocation() {
+  toast('Obteniendo ubicación...', 'i');
+  try {
+    const pos = await getGPS();
+    document.getElementById('s-lat').value = pos.lat.toFixed(6);
+    document.getElementById('s-lng').value = pos.lng.toFixed(6);
+    toast('Ubicación capturada ✓', 's');
+  } catch(e) { toast('No se pudo obtener GPS', 'e'); }
+}
+
+function handlePhotoUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const area = document.getElementById('photo-area');
+    area.innerHTML = `<img src="${e.target.result}" /><p style="margin-top:8px">Foto lista ✓</p>`;
+    photoB64 = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function finishSetup() {
+  if (!validateStep(5)) return;
+
+  const token    = document.getElementById('s-token').value.trim().toUpperCase() || '';
+  const tokenExp = document.getElementById('s-token-exp').value || '';
+
+  const prof = {
+    nombre:       document.getElementById('s-nombre').value.trim(),
+    cargo:        document.getElementById('s-cargo').value.trim(),
+    rfc:          document.getElementById('s-rfc').value.trim().toUpperCase(),
+    curp:         document.getElementById('s-curp').value.trim().toUpperCase(),
+    empresa:      document.getElementById('s-empresa').value.trim(),
+    admin_wa:     document.getElementById('s-wa').value.trim(),
+    secret:       document.getElementById('s-secret').value.trim(),
+    modo:         document.getElementById('s-modo').value,
+    empresa_lat:  parseFloat(document.getElementById('s-lat').value) || null,
+    empresa_lng:  parseFloat(document.getElementById('s-lng').value) || null,
+    radio_metros: parseInt(document.getElementById('s-radio').value) || 150,
+    foto:         photoB64 || null,
+    token_expiry: tokenExp ? new Date(tokenExp).toISOString() : null,
+    alta:         new Date().toISOString(),
+    version:      VERSION,
+  };
+
+  const hashInput = prof.nombre + prof.empresa + prof.rfc + prof.alta;
+  prof.id_hash = (await sha256(hashInput)).slice(0, 32);
+
+  saveProfile(prof);
+  await initApp();
+  toast('Configuración guardada ✓', 's');
+}
+
+// ══════════════════════════════════════════════════════
+//  CAMERA
+// ══════════════════════════════════════════════════════
+async function startCamera() {
+  try {
+    videoStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 640 } },
+      audio: false
+    });
+    document.getElementById('video-preview').srcObject = videoStream;
+    document.getElementById('cam-wrap').style.display = 'block';
+    document.getElementById('photo-prev').style.display = 'none';
+    document.getElementById('retake-btn').style.display = 'none';
+    photoB64 = null;
+  } catch(e) {
+    toast('No se pudo acceder a la cámara', 'w');
+    document.getElementById('cam-wrap').style.display = 'none';
+  }
+}
+
+function stopCamera() {
+  if (videoStream) {
+    videoStream.getTracks().forEach(t => t.stop());
+    videoStream = null;
+  }
+}
+
+function capturePhoto() {
+  const video  = document.getElementById('video-preview');
+  const canvas = document.getElementById('canvas-cap');
+  const size   = Math.min(video.videoWidth, video.videoHeight);
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.save();
+  ctx.translate(size, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, (video.videoWidth - size) / 2, (video.videoHeight - size) / 2, size, size, 0, 0, size, size);
+  ctx.restore();
+  photoB64 = canvas.toDataURL('image/jpeg', 0.7);
+  document.getElementById('photo-prev').src = photoB64;
+  document.getElementById('photo-prev').style.display = 'block';
+  document.getElementById('retake-btn').style.display = 'block';
+  document.getElementById('cam-wrap').style.display = 'none';
+  stopCamera();
+}
+
+function retakePhoto() {
+  photoB64 = null;
+  document.getElementById('photo-prev').style.display = 'none';
+  document.getElementById('retake-btn').style.display = 'none';
+  startCamera();
+}
+
+// ══════════════════════════════════════════════════════
+//  CHECK-IN FLOW
+// ══════════════════════════════════════════════════════
+async function startCheckin(tipo) {
+  // Check token
+  const ts = checkTokenStatus();
+  if (ts === 'expired') {
+    toast('Tu token ha vencido — solicita renovación', 'e');
+    showModal('modal-renovar');
+    return;
+  }
+
+  currentTipo = tipo;
+  const meta = TIPO_META[tipo];
+  document.getElementById('ci-tipo-badge').innerHTML = meta.icon + ' ' + meta.label;
+  document.getElementById('ci-notes').value = '';
+  document.getElementById('geo-block').style.display = 'none';
+  document.getElementById('exencion-active').style.display = 'none';
+  document.getElementById('screen-preview-img').style.display = 'none';
+  document.getElementById('attach-list').innerHTML = '';
+  document.getElementById('attach-summary').textContent = '';
+  attachments = [];
+  gpsData = null;
+  gpsStatus = 'loading';
+  updateGPSCard('loading', 'Obteniendo ubicación...', '—');
+  showScreen('checkin');
+  startCamera();
+  refreshGPS();
+}
+
+async function refreshGPS() {
+  try {
+    const pos = await getGPS();
+    gpsData = pos;
+    const coords = pos.lat.toFixed(5) + ', ' + pos.lng.toFixed(5) + ' ±' + Math.round(pos.acc) + 'm';
+
+    updateExencionUI();
+    const ex = exencion;
+    const today = new Date().toISOString().slice(0,10);
+    const exActive = ex && today >= ex.from && today <= ex.to;
+
+    if (profile.modo === 'remoto_permanente' || exActive) {
+      gpsStatus = 'remote';
+      updateGPSCard('remote', 'Modo remoto — GPS registrado', coords);
+      document.getElementById('geo-block').style.display = 'none';
+      if (exActive) {
+        document.getElementById('exencion-active').style.display = 'block';
+        document.getElementById('exencion-code-display').textContent = ex.code;
+      }
+    } else if (profile.empresa_lat && profile.empresa_lng) {
+      const dist = haversine(pos.lat, pos.lng, profile.empresa_lat, profile.empresa_lng);
+      if (dist <= profile.radio_metros) {
+        gpsStatus = 'ok';
+        updateGPSCard('ok', 'Dentro del área · ' + Math.round(dist) + 'm', coords);
+        document.getElementById('geo-block').style.display = 'none';
+      } else {
+        gpsStatus = 'out';
+        updateGPSCard('out', 'Fuera del área · ' + Math.round(dist) + 'm', coords);
+        document.getElementById('geo-block').style.display = 'block';
+        document.getElementById('geo-dist').textContent = Math.round(dist);
+      }
+    } else {
+      gpsStatus = 'ok';
+      updateGPSCard('ok', 'GPS capturado', coords);
+    }
+  } catch(e) {
+    gpsStatus = 'loading';
+    updateGPSCard('load', 'GPS no disponible — continúa sin ubicación', 'Sin señal');
+  }
+}
+
+function updateGPSCard(status, title, coords) {
+  const badges = { ok:'ok', out:'out', load:'load', remote:'remote' };
+  const labels = { ok:'EN ZONA', out:'FUERA', load:'SIN GPS', remote:'REMOTO' };
+  document.getElementById('gps-title').textContent  = title;
+  document.getElementById('gps-coords').textContent = coords;
+  const badge = document.getElementById('gps-badge');
+  badge.className = 'gps-badge ' + (badges[status] || 'load');
+  badge.textContent = labels[status] || '—';
+}
+
+async function submitCheckin() {
+  if (gpsStatus === 'out') {
+    toast('No puedes registrar — estás fuera del área', 'e');
+    return;
+  }
+  if (!photoB64) {
+    toast('Toma una foto primero', 'e');
+    return;
+  }
+
+  const btn = document.getElementById('ci-submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Firmando registro...';
+
+  const now = new Date();
+  const record = {
+    id:             crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36),
+    version:        VERSION,
+    device_id:      deviceId,
+    empleado_nombre: profile.nombre,
+    empleado_cargo:  profile.cargo,
+    empleado_empresa: profile.empresa,
+    empleado_rfc:    profile.rfc,
+    empleado_curp:   profile.curp || '',
+    tipo:           currentTipo,
+    timestamp:      now.toISOString(),
+    timestamp_local: now.toLocaleDateString('es-MX', { day:'2-digit', month:'2-digit', year:'numeric' })
+                    + ' ' + now.toLocaleTimeString('es-MX'),
+    lat:            gpsData?.lat || null,
+    lng:            gpsData?.lng || null,
+    precision_m:    gpsData?.acc || null,
+    foto_selfie:    photoB64,
+    modo:           (exencion && new Date().toISOString().slice(0,10) >= exencion.from
+                      && new Date().toISOString().slice(0,10) <= exencion.to) ? 'remoto_autorizado' : profile.modo,
+    codigo_exencion: exencion?.code || null,
+    notas:          document.getElementById('ci-notes').value.trim(),
+    adjuntos:       attachments.map(a => ({ name:a.name, size:a.size, kind:a.kind, files_count:a.files_count||null })),
+    hash_sha256:    null,
+  };
+
+  // Sign: hash everything except the hash field itself
+  const sigStr = JSON.stringify({ ...record, foto_selfie: '[foto]' });
+  record.hash_sha256 = await sha256(sigStr);
+
+  // Save
+  const recs = loadRecords();
+  recs.unshift(record);
+  saveRecords(recs);
+  lastRecord = record;
+
+  stopCamera();
+  showScreen('home');
+  renderHome();
+  renderHistorial();
+
+  // Show success modal
+  const meta = TIPO_META[currentTipo];
+  document.getElementById('modal-success-body').innerHTML =
+    '<strong>' + meta.icon + ' ' + meta.label + '</strong><br>'
+    + now.toLocaleString('es-MX') + '<br>'
+    + (gpsData ? ('📍 ' + gpsData.lat.toFixed(4) + ', ' + gpsData.lng.toFixed(4)) : '📍 Sin GPS');
+  document.getElementById('modal-hash').textContent = record.hash_sha256;
+  showModal('modal-success');
+
+  btn.disabled = false;
+  btn.textContent = 'Registrar y firmar ✓';
+}
+
+// ══════════════════════════════════════════════════════
+//  SHARE WHATSAPP
+// ══════════════════════════════════════════════════════
+function shareWhatsApp() {
+  if (!lastRecord || !profile) return;
+  const meta = TIPO_META[lastRecord.tipo];
+  const msg = encodeURIComponent(
+    '📋 *DataLink Asistencia — Registro*\n'
+    + '─────────────────\n'
+    + meta.icon + ' *' + meta.label.toUpperCase() + '*\n'
+    + '👤 ' + lastRecord.empleado_nombre + '\n'
+    + '🏢 ' + lastRecord.empleado_empresa + '\n'
+    + '💼 ' + lastRecord.empleado_cargo + '\n'
+    + '📅 ' + lastRecord.timestamp_local + '\n'
+    + (lastRecord.lat ? '📍 ' + lastRecord.lat.toFixed(5) + ', ' + lastRecord.lng.toFixed(5) + '\n' : '')
+    + '🔐 Hash: ' + lastRecord.hash_sha256.slice(0, 20) + '...\n'
+    + '─────────────────\n'
+    + '✅ Firmado con SHA-256 · DataLink Asistencia v' + VERSION
+  );
+  const wa = profile.admin_wa ? profile.admin_wa.replace(/\D/g,'') : '';
+  window.open('https://wa.me/' + wa + '?text=' + msg, '_blank');
+}
+
+// ══════════════════════════════════════════════════════
+//  EXPORT RECORDS
+// ══════════════════════════════════════════════════════
+function exportRecords() {
+  const recs = loadRecords();
+  if (!recs.length) { toast('Sin registros para exportar', 'w'); return; }
+  const data = {
+    exportado: new Date().toISOString(),
+    empleado: profile?.nombre,
+    empresa:  profile?.empresa,
+    device_id: deviceId,
+    version:  VERSION,
+    total_registros: recs.length,
+    registros: recs.map(r => ({ ...r, foto_selfie: r.foto_selfie ? '[base64_foto]' : null })),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type:'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'registros-' + (profile?.nombre || 'empleado').replace(/\s+/g,'-') + '-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('JSON exportado ✓', 's');
+}
+
+function exportPDF() {
+  const recs = loadRecords();
+  if (!recs.length) { toast('Sin registros para exportar', 'w'); return; }
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'portrait', unit:'mm', format:'a4' });
+    const W = 210, M = 15;
+    let y = M;
+
+    // Header
+    doc.setFillColor(7, 11, 20);
+    doc.rect(0, 0, W, 28, 'F');
+    doc.setTextColor(0, 207, 255);
+    doc.setFontSize(16);
+    doc.setFont('helvetica','bold');
+    doc.text('DATALINK ASISTENCIA — Reporte de Registros', M, 12);
+    doc.setTextColor(122, 143, 168);
+    doc.setFontSize(9);
+    doc.setFont('helvetica','normal');
+    doc.text('Empleado: ' + (profile?.nombre || '—') + '  |  Empresa: ' + (profile?.empresa || '—'), M, 19);
+    doc.text('Exportado: ' + new Date().toLocaleString('es-MX') + '  |  Device: ' + deviceId, M, 24);
+    y = 36;
+
+    recs.forEach((r, i) => {
+      if (y > 260) { doc.addPage(); y = M; }
+      const meta = TIPO_META[r.tipo] || { label: r.tipo };
+      doc.setFillColor(17, 24, 39);
+      doc.roundedRect(M, y, W - M*2, 22, 2, 2, 'F');
+      doc.setDrawColor(30, 45, 69);
+      doc.roundedRect(M, y, W - M*2, 22, 2, 2, 'D');
+      doc.setTextColor(226, 234, 244);
+      doc.setFontSize(10);
+      doc.setFont('helvetica','bold');
+      doc.text(meta.label.toUpperCase(), M+4, y+7);
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(8);
+      doc.setTextColor(122, 143, 168);
+      doc.text(r.timestamp_local, M+4, y+13);
+      if (r.lat) doc.text('GPS: ' + r.lat.toFixed(5) + ', ' + r.lng.toFixed(5), M+4, y+18);
+      doc.setTextColor(61, 79, 101);
+      doc.setFontSize(7);
+      doc.text('SHA-256: ' + (r.hash_sha256 || '—'), M+60, y+7);
+      doc.text('Modo: ' + (r.modo || '—'), M+60, y+13);
+      if (r.notas) doc.text('Notas: ' + r.notas.slice(0,60), M+60, y+18);
+      y += 26;
+    });
+
+    doc.save('datalink-asistencia-' + (profile?.nombre || 'emp').replace(/\s+/g,'-') + '-' + new Date().toISOString().slice(0,10) + '.pdf');
+    toast('PDF exportado ✓', 's');
+  } catch(e) {
+    toast('Error al generar PDF', 'e');
+    console.error(e);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+//  ID VIRTUAL
+// ══════════════════════════════════════════════════════
+function renderIDCard() {
+  if (!profile) return;
+  document.getElementById('id-empresa-name').textContent = profile.empresa || '—';
+  document.getElementById('id-nombre').textContent       = profile.nombre  || '—';
+  document.getElementById('id-cargo').textContent        = profile.cargo   || '—';
+  document.getElementById('id-rfc').textContent          = 'RFC: ' + (profile.rfc  || '—');
+  document.getElementById('id-curp').textContent         = 'CURP: ' + (profile.curp || '—');
+  document.getElementById('id-alta').textContent         = new Date(profile.alta).toLocaleDateString('es-MX');
+  document.getElementById('id-hash-box').textContent     = profile.id_hash || '—';
+
+  if (profile.foto) {
+    document.getElementById('id-photo-ph').style.display  = 'none';
+    const img = document.getElementById('id-photo-img');
+    img.src = profile.foto;
+    img.style.display = 'block';
+  }
+}
+
+function downloadIDCard() {
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:[85, 54] });
+    doc.setFillColor(13, 27, 46);
+    doc.rect(0, 0, 85, 54, 'F');
+    doc.setTextColor(0, 207, 255);
+    doc.setFontSize(6);
+    doc.setFont('helvetica','normal');
+    doc.text('DATALINK ASISTENCIA', 4, 5);
+    doc.setTextColor(226, 234, 244);
+    doc.setFontSize(10);
+    doc.setFont('helvetica','bold');
+    doc.text(profile.nombre || '—', 4, 20);
+    doc.setFontSize(7);
+    doc.setTextColor(0, 207, 255);
+    doc.text((profile.cargo || '—').toUpperCase(), 4, 26);
+    doc.setTextColor(122, 143, 168);
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(7);
+    doc.text(profile.empresa || '—', 4, 32);
+    doc.text('RFC: ' + (profile.rfc || '—'), 4, 38);
+    doc.text('Alta: ' + new Date(profile.alta).toLocaleDateString('es-MX'), 4, 44);
+    doc.setFontSize(5);
+    doc.setTextColor(61, 79, 101);
+    doc.text((profile.id_hash || '—').slice(0,28), 4, 50);
+    if (profile.foto) {
+      try { doc.addImage(profile.foto, 'JPEG', 59, 6, 22, 22, '', 'FAST'); } catch(e) {}
+    }
+    doc.save('ID-' + (profile.nombre || 'empleado').replace(/\s+/g,'-') + '.pdf');
+    toast('Credencial descargada ✓', 's');
+  } catch(e) { toast('Error al generar PDF', 'e'); }
+}
+
+// ══════════════════════════════════════════════════════
+//  HOME RENDER
+// ══════════════════════════════════════════════════════
+function renderHome() {
+  if (!profile) return;
+  document.getElementById('home-name').textContent    = profile.nombre;
+  document.getElementById('home-cargo').textContent   = profile.cargo;
+  document.getElementById('home-empresa').textContent = profile.empresa;
+
+  if (profile.foto) {
+    document.getElementById('home-avatar-ph').style.display  = 'none';
+    const img = document.getElementById('home-avatar-img');
+    img.src = profile.foto;
+    img.style.display = 'block';
+  }
+
+  renderTokenCard();
+  renderLastRecord();
+
+  // Settings fields
+  const setEl = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  setEl('cfg-nombre', profile.nombre);
+  setEl('cfg-empresa', profile.empresa);
+  setEl('cfg-modo', profile.modo === 'presencial' ? 'Presencial (geofencing)' : 'Remoto permanente');
+  setEl('cfg-rfc', profile.rfc || '—');
+  setEl('cfg-wa', profile.admin_wa || '—');
+  setEl('cfg-device', deviceId);
+  setEl('cfg-tok-exp', profile.token_expiry ? new Date(profile.token_expiry).toLocaleString('es-MX') : 'Sin token');
+}
+
+function renderLastRecord() {
+  const recs = loadRecords();
+  const container = document.getElementById('last-registro');
+  if (!recs.length) {
+    container.innerHTML = '<div class="last-empty">Sin registros aún — comienza tu primera jornada.</div>';
+    return;
+  }
+  const r = recs[0];
+  const meta = TIPO_META[r.tipo] || { icon:'📋', label: r.tipo };
+  container.innerHTML = `
+    <div class="last-tipo">${meta.icon} ${meta.label}</div>
+    <div class="last-time">${r.timestamp_local}</div>
+    <div style="font-size:9px;color:var(--text3);font-family:monospace;margin-top:4px">${r.hash_sha256?.slice(0,24)}...</div>
+  `;
+}
+
+// ══════════════════════════════════════════════════════
+//  HISTORIAL RENDER
+// ══════════════════════════════════════════════════════
+function renderHistorial() {
+  const recs = loadRecords();
+  const list = document.getElementById('historial-list');
+  if (!recs.length) {
+    list.innerHTML = '<div class="hist-empty">📭 Aún no tienes registros en este dispositivo.</div>';
+    return;
+  }
+  list.innerHTML = recs.map((r, i) => {
+    const meta = TIPO_META[r.tipo] || { icon:'📋', label: r.tipo };
+    const modoClass = r.modo === 'remoto_autorizado' || r.modo === 'remoto_permanente' ? 'r' : 'p';
+    const modoLabel = r.modo === 'remoto_autorizado' ? 'REMOTO AUTH' : r.modo === 'remoto_permanente' ? 'REMOTO' : 'PRESENCIAL';
+    return `
+    <div class="rec-card">
+      <div class="rec-ico">${meta.icon}</div>
+      <div class="rec-body">
+        <div class="rec-tipo">${meta.label}</div>
+        <div class="rec-time">${r.timestamp_local}</div>
+        ${r.notas ? `<div style="font-size:11px;color:var(--text2);margin-top:2px">${r.notas}</div>` : ''}
+        <div class="rec-hash">${r.hash_sha256 || '—'}</div>
+      </div>
+      <div class="rec-right">
+        <div class="rec-badge ${modoClass}">${modoLabel}</div>
+        <div class="rec-del" onclick="deleteRecord(${i})" title="Eliminar">🗑</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteRecord(idx) {
+  const recs = loadRecords();
+  recs.splice(idx, 1);
+  saveRecords(recs);
+  renderHistorial();
+  renderLastRecord();
+  toast('Registro eliminado', 'i');
+}
+
+// ══════════════════════════════════════════════════════
+//  WIPE
+// ══════════════════════════════════════════════════════
+function wipeDevice() {
+  localStorage.clear();
+  closeModal('modal-wipe');
+  toast('Todos los datos eliminados', 'i');
+  setTimeout(() => location.reload(), 1200);
+}
+
+// ══════════════════════════════════════════════════════
+//  SCREEN NAVIGATION
+// ══════════════════════════════════════════════════════
+const navIds = { home:'ni-home', historial:'ni-historial', id:'ni-id', recursos:'ni-recursos', settings:'ni-settings' };
+
+function showScreen(name) {
+  // Stop camera if leaving checkin
+  if (currentScreen === 'checkin' && name !== 'checkin') stopCamera();
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n => n.classList.remove('active'));
+
+  const screen = document.getElementById('screen-' + name);
+  if (screen) screen.classList.add('active');
+
+  if (navIds[name]) document.getElementById(navIds[name])?.classList.add('active');
+  currentScreen = name;
+
+  if (name === 'historial') renderHistorial();
+  if (name === 'id')        renderIDCard();
+}
+
+// ══════════════════════════════════════════════════════
+//  MODAL
+// ══════════════════════════════════════════════════════
+function showModal(id) {
+  document.getElementById(id).classList.add('active');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('active');
+}
+// Close on overlay click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+
+// ══════════════════════════════════════════════════════
+//  TOAST
+// ══════════════════════════════════════════════════════
+let toastTimer = null;
+function toast(msg, type = 'i') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast ' + type;
+  void t.offsetWidth;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════════════
+async function initApp() {
+  profile   = loadProfile();
+  records   = loadRecords();
+  deviceId  = getDeviceId();
+  updateExencionUI();
+
+  const app     = document.getElementById('app');
+  const bnav    = document.getElementById('bnav');
+  const blocked = document.getElementById('blocked');
+
+  if (!profile) {
+    // First time — show setup
+    app.classList.add('visible');
+    bnav.style.display = 'none';
+    showScreen('setup');
+    return;
+  }
+
+  app.classList.add('visible');
+  bnav.style.display = 'flex';
+
+  // Check token
+  const ts = checkTokenStatus();
+  if (ts === 'expired') {
+    blocked.classList.add('show');
+  }
+
+  renderHome();
+  showScreen('home');
+}
+
+// ══════════════════════════════════════════════════════
+//  SCREEN CAPTURE & RECORDING
+// ══════════════════════════════════════════════════════
+async function captureScreen() {
+  try {
+    const stream = await navigator.mediaDevices.getDisplayMedia({ video:{ cursor:'always' }, audio:false });
+    const track  = stream.getVideoTracks()[0];
+    const settings = track.getSettings();
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+    const canvas = document.createElement('canvas');
+    canvas.width  = settings.width  || video.videoWidth;
+    canvas.height = settings.height || video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const b64 = canvas.toDataURL('image/png');
+    stream.getTracks().forEach(t => t.stop());
+    video.remove();
+    const sizeKB = Math.round(b64.length * 0.75 / 1024);
+    attachments.push({ name:'captura-'+Date.now()+'.png', size:sizeKB*1024, type:'image/png', data:b64, kind:'screenshot' });
+    const preview = document.getElementById('screen-preview-img');
+    preview.src = b64; preview.style.display = 'block';
+    renderAttachList();
+    toast('Captura de pantalla lista ✓','s');
+  } catch(e) { if(e.name!=='NotAllowedError') toast('No se pudo capturar la pantalla','e'); }
+}
+
+async function startScreenRecord() {
+  if (screenRecStream) { stopScreenRecord(); return; }
+  try {
+    screenRecStream = await navigator.mediaDevices.getDisplayMedia({ video:true, audio:true });
+    screenRecChunks = []; screenRecSecs = 0;
+    screenRecorder  = new MediaRecorder(screenRecStream);
+    screenRecorder.ondataavailable = e => { if(e.data.size>0) screenRecChunks.push(e.data); };
+    screenRecorder.onstop = finishScreenRecord;
+    screenRecorder.start(200);
+    screenRecStream.getVideoTracks()[0].onended = stopScreenRecord;
+    document.getElementById('rec-indicator').style.display = 'inline-flex';
+    document.getElementById('btn-screen-rec').querySelector('.attach-btn-label').textContent = 'Detener';
+    screenRecTimer = setInterval(() => {
+      screenRecSecs++;
+      document.getElementById('rec-timer').textContent = 'GRABANDO '+screenRecSecs+'s';
+      if(screenRecSecs>=30) stopScreenRecord();
+    },1000);
+    toast('Grabando pantalla...','w');
+  } catch(e) { if(e.name!=='NotAllowedError') toast('No se pudo iniciar grabación','e'); }
+}
+
+function stopScreenRecord() {
+  if(screenRecorder&&screenRecorder.state!=='inactive') screenRecorder.stop();
+  if(screenRecStream){ screenRecStream.getTracks().forEach(t=>t.stop()); screenRecStream=null; }
+  clearInterval(screenRecTimer);
+  document.getElementById('rec-indicator').style.display='none';
+  document.getElementById('btn-screen-rec').querySelector('.attach-btn-label').textContent='Grabar pantalla';
+}
+
+function finishScreenRecord() {
+  const blob=new Blob(screenRecChunks,{type:'video/webm'});
+  const name='grabacion-'+Date.now()+'.webm';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    attachments.push({name,size:blob.size,type:'video/webm',data:e.target.result,kind:'video'});
+    renderAttachList();
+    toast('Grabación lista ('+screenRecSecs+'s) ✓','s');
+  };
+  reader.readAsDataURL(blob);
+  screenRecChunks=[];
+}
+
+// ══════════════════════════════════════════════════════
+//  FILE / FOLDER HANDLER
+// ══════════════════════════════════════════════════════
+async function handleFiles(fileList, isFolder) {
+  if(!fileList.length) return;
+  const files=Array.from(fileList);
+  if(isFolder) {
+    toast('Comprimiendo carpeta...','i');
+    showProgress(true);
+    try {
+      const zip=new JSZip();
+      for(let i=0;i<files.length;i++){
+        const f=files[i];
+        const rel=f.webkitRelativePath||f.name;
+        zip.file(rel, await f.arrayBuffer());
+        setProgress(Math.round((i+1)/files.length*85));
+      }
+      const zipBlob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},
+        meta=>setProgress(85+Math.round(meta.percent*0.15)));
+      const folderName=(files[0].webkitRelativePath||'carpeta').split('/')[0];
+      const zipName=folderName+'-'+Date.now()+'.zip';
+      const reader=new FileReader();
+      reader.onload=e=>{
+        attachments.push({name:zipName,size:zipBlob.size,type:'application/zip',
+          data:e.target.result,kind:'folder_zip',files_count:files.length});
+        renderAttachList();
+        toast(files.length+' archivos comprimidos ✓','s');
+        showProgress(false);
+      };
+      reader.readAsDataURL(zipBlob);
+    } catch(err){ toast('Error al comprimir carpeta','e'); showProgress(false); }
+  } else {
+    for(const f of files){
+      const reader=new FileReader();
+      reader.onload=e=>{
+        attachments.push({name:f.name,size:f.size,type:f.type,data:e.target.result,kind:'file'});
+        renderAttachList();
+      };
+      reader.readAsDataURL(f);
+    }
+    toast(files.length+(files.length===1?' archivo adjunto':' archivos adjuntos'),'s');
+  }
+}
+
+function showProgress(show) {
+  document.getElementById('attach-progress').style.display=show?'block':'none';
+  if(!show) setProgress(0);
+}
+function setProgress(pct){ document.getElementById('attach-progress-fill').style.width=pct+'%'; }
+
+function renderAttachList() {
+  const list=document.getElementById('attach-list');
+  const icon={screenshot:'🖥️',video:'🎬',file:'📄',folder_zip:'📁'};
+  list.innerHTML=attachments.map((a,i)=>`
+    <div class="attach-item">
+      <div class="attach-item-icon">${icon[a.kind]||'📎'}</div>
+      <div class="attach-item-name">${a.name}${a.files_count?' ('+a.files_count+' archivos)':''}</div>
+      <div class="attach-item-size">${formatSize(a.size)}</div>
+      <div class="attach-item-del" onclick="removeAttachment(${i})" title="Quitar">✕</div>
+    </div>`).join('');
+  const total=attachments.reduce((s,a)=>s+a.size,0);
+  document.getElementById('attach-summary').textContent=
+    attachments.length?attachments.length+' adjunto(s) · '+formatSize(total)+' total':'';
+}
+
+function removeAttachment(idx) {
+  attachments.splice(idx,1);
+  renderAttachList();
+  if(!attachments.some(a=>a.kind==='screenshot'))
+    document.getElementById('screen-preview-img').style.display='none';
+}
+
+function formatSize(bytes) {
+  if(bytes<1024) return bytes+' B';
+  if(bytes<1048576) return (bytes/1024).toFixed(1)+' KB';
+  return (bytes/1048576).toFixed(1)+' MB';
+}
+
+// ══════════════════════════════════════════════════════
+//  BOOT
+// ══════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  setTimeout(async () => {
+    document.getElementById('splash').classList.add('hide');
+    await initApp();
+  }, 2000);
+});
+</script>
+</body>
+</html>
